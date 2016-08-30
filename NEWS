@@ -1,0 +1,13 @@
+Changes in MSTherm 0.4.3
+
+ o Additional additional normalization method (by Tm distribution)
+ o Fixed warnings due to missing 'score' column (should be optional)
+ o Fixed bug due to spectra with all missing quant values (from some quant
+    software)
+
+Changes in MSTherm 0.4.1
+
+ o The plot.MSThermResult method has two additional arguments (CI.points and
+    CI.Tm) which control whether to plot the confidence intervals if present.
+    Previously these were always plotted if present. The default of both is still
+    TRUE
