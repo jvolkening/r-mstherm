@@ -869,7 +869,8 @@ model_genes <- function(expt,genes,np,...) {
     else {
         protein_lists <- lapply(expt$samples,function(d)
             unique(sapply(d$replicates, function(l) {l$data$protein})) )
-        proteins <- Reduce(union, protein_lists)
+        # proteins <- Reduce(union, protein_lists)
+        proteins <- unique(unlist(protein_lists))
     }
 
     pb <- txtProgressBar(min=0,max=length(proteins),style=3)
