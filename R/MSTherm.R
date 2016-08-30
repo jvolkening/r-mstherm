@@ -355,7 +355,7 @@ normalize_to_std <- function( expt, gname, ... ) {
     while (n_rows*(n_rows+1) < n_replicates) {
         n_rows <- n_rows + 1
     }
-    par(mfrow=c(n_rows,n_rows+1))
+    par(mfrow=c(n_rows,n_rows))
 
     n_samples <- length(expt$samples)
         
@@ -403,7 +403,7 @@ normalize_to_profile <- function( expt, profile, model ) {
     while (n_rows*(n_rows+1) < n_replicates) {
         n_rows <- n_rows + 1
     }
-    par(mfrow=c(n_rows,n_rows+1))
+    par(mfrow=c(n_rows,n_rows))
 
     n_samples <- length(expt$samples)
         
@@ -438,6 +438,7 @@ gen_description <- function(expt, gname, sep='|') {
 
 model_gene <- function( expt, gname,
   min_psms     = 1,
+  min_psm_tot  = 2,
   max_inf      = 1,
   min_score,
   max_score,
@@ -468,6 +469,7 @@ model_gene <- function( expt, gname,
     tbl_cols_per_repl <- 6
 
     replicate_total <- 0
+    psm_tot <- 0
     n_samples <- length(expt$samples)
         
     for (i_sample in 1:n_samples) {
@@ -495,7 +497,7 @@ model_gene <- function( expt, gname,
             if (is.null(self$tmin) || self$tmin > min(temps)) {
                 self$tmin <- min(temps)
             }
-            if (is.null(self$tmax) || self$tmax > max(temps)) {
+            if (is.null(self$tmax) || self$tmax < max(temps)) {
                 self$tmax <- max(temps)
             }
 
@@ -512,8 +514,12 @@ model_gene <- function( expt, gname,
             sub <- sub[ok,]
             quant <- quant[ok,]
 
+            psm_tot <- psm_tot + nrow(sub)
             if (nrow(sub) < min_psms) {
                 return(NULL)
+            }
+            if (nrow(sub) < 1) {
+                next
             }
 
             profile <- gen_profile(quant,method,method.denom=method.denom)
@@ -569,6 +575,9 @@ model_gene <- function( expt, gname,
         }
     }
 
+    if (psm_tot < min_psm_tot) {
+        return( NULL )
+    }
     return( self )
 }
 
@@ -1006,7 +1015,11 @@ norm_to_std <- function(replicate,gene) {
     temps <- replicate$meta$temp
     quant <- replicate$data[,quant_columns]
 
-    std <- quant[which(replicate$data$protein == gene),]
+    std <- matrix(nrow=0,ncol=ncol(quant)) 
+    for (g in gene) {
+        tmp <- quant[which(replicate$data$protein == g),]
+        std <- rbind(std, tmp)
+    }
     std.sums <- apply(std,2,sum)
     std.ratios <- std.sums/std.sums[1]
     sums <- apply(as.matrix(quant),2,function(x){sum(as.numeric(x),na.rm=T)})
