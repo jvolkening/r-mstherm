@@ -242,12 +242,11 @@ as.data.frame.MSThermResultSet <- function( set ) {
     repl_names <- unique(unlist(repl_lists))
     repl_names <- repl_names[order(repl_names)]
 
-    #repl_names <- sapply(set[[1]]$series, '[[', "name")
     for (r in repl_names) {
         x <- set[1]$series[[r]][['x']]
 
-        for(foo in c("tm","psm","inf","slope","k","plat","r2")) {
-            df[[paste0(r,'.',foo)]]  <- sapply(set, function(v) v$series[[r]][[foo]])
+        for(col in c("tm","psm","inf","slope","k","plat","r2")) {
+            df[[paste0(r,'.',col)]]  <- sapply(set, function(v) v$series[[r]][[col]])
             #for (i in 1:length(x)) {
                 #df[[paste0(r,'.',x[i])]]  <- sapply(set, function(v) v$series[[r]][['y.fit']][i])
             #}
@@ -470,34 +469,31 @@ model_gene <- function( expt, gname,
     )
     self$parameters[['expt']] <- NULL
 
-    desc <- gen_description(expt, gname, sep=annot_sep)
-    self$annotation <- desc
+    self$annotation <- gen_description(expt, gname, sep=annot_sep)
 
-    res_cols_per_repl <- 28
-    tbl_cols_per_repl <- 6
-
-    replicate_total <- 0
-    psm_tot <- 0
+    psm_tot   <- 0 # track total PSMs for protein
     n_samples <- length(expt$samples)
         
     for (i_sample in 1:n_samples) {
 
-        psm_smp <- 0
+        psm_smp <- 0 # track total PSMs for sample
 
         sample <- expt$samples[[i_sample]]
         n_replicates <- length(sample$replicates)
         self$sample_names[i_sample] <- sample$name
 
-        merged_profile <- c()
+        # Track combined data for using "merge_reps"
+        merged_profiles <- c()
         merged_temps   <- c()
         merged_splits  <- c(0)
-        merged_sums    <- 0
+        merged_psms    <- 0
 
+        # Process each replicate
         for (i_replicate in 1:n_replicates) {
             
             replicate <- sample$replicates[[i_replicate]]
-            replicate_total <- replicate_total + 1
-            
+           
+            # Set score range if not yet defined
             if ("score" %in% colnames(replicate$data)) {
                 if (missing(max_score)) {
                     max_score = max(replicate$data$score)
@@ -508,6 +504,8 @@ model_gene <- function( expt, gname,
             }
 
             temps <- replicate$meta$temp
+
+            # Track global min and max temperature points for the protein
             if (is.null(self$tmin) || self$tmin > min(temps)) {
                 self$tmin <- min(temps)
             }
@@ -515,41 +513,54 @@ model_gene <- function( expt, gname,
                 self$tmax <- max(temps)
             }
 
+            # Pull out matching data points passing coisolation and score
+            # thresholds
             sub <- replicate$data[which(replicate$data$protein == gname
                 & replicate$data$coelute_inf <= max_inf),];
             if ("score" %in% colnames(sub)) {
                 sub <- sub[which( sub$score >= min_score & sub$score <= max_score ),]
             }
 
+            # Reorder channels based on metadata
             quant_columns <- match(replicate$meta$channel,colnames(sub))
             quant <- sub[,quant_columns]
 
-            ok <- apply(quant,1,function(v) {all(!is.na(v)) & any(v>0)})
-            sub <- sub[ok,]
+            # Filter out rows with NA or with all zero values
+            ok    <- apply(quant,1,function(v) {all(!is.na(v)) & any(v>0)})
+            sub   <- sub[ok,]
             quant <- quant[ok,]
 
-            psm_tot <- psm_tot + nrow(sub)
-            psm_smp <- psm_smp + nrow(sub)
-            if (nrow(sub) < min_rep_psm) {
+            n_psms  <- nrow(sub)
+
+            # Update PSM totals and check cutoffs
+            psm_tot <- psm_tot + n_psms
+            psm_smp <- psm_smp + n_psms
+            if (n_psms < min_rep_psm) {
                 return(NULL)
             }
-            if (nrow(sub) < 1) {
+
+            # Obviously don't try to model if no rows pass filtering
+            if (n_psms < 1) {
                 next
             }
+
             profile <- gen_profile(quant,method,method.denom=method.denom)
 
-            merged_profile <- c(merged_profile,profile)            
-            merged_temps   <- c(merged_temps,temps)
+            # Updated merged variables for use with merge_reps
+            merged_profiles <- c(merged_profiles,profile)
+            merged_temps    <- c(merged_temps,temps)
             merged_splits   <- c(merged_splits, length(merged_temps))
-            merged_sums    <- merged_sums + nrow(sub)
+            merged_psms     <- merged_psms + n_psms
 
-            fit <- try_fit(profile,temps,trim=trim,smooth=smooth)
+            fit <- try_fit(profile, temps, trim=trim, smooth=smooth)
             fit$is.fitted <- !is.null(fit)
 
             # calculate weighted co-inf
-            sums       <- apply(quant,1,sum)
+            sums       <- apply(quant, 1, sum)
             fit$inf    <- sum(sub$coelute_inf * sums) / sum(sums)
-            fit$psm    <- nrow(sub)
+
+            # keep track of other data for later use
+            fit$psm    <- n_psms
             fit$name   <- replicate$name
             fit$sample <- sample$name
             fit$x      <- temps
@@ -557,7 +568,7 @@ model_gene <- function( expt, gname,
 
             if (fit$is.fitted) {
 
-                #bootstrap
+                #bootstrap if asked
                 bs <- c()
                 iterations <- 20
                 bs.ratios <- matrix(nrow=iterations,ncol=length(profile))
@@ -583,63 +594,72 @@ model_gene <- function( expt, gname,
                 }
 
             }
+
+            # If unfitted, these variables still need to be set but should be NA
             else {
-                fit$tm <- NA
+                fit$tm    <- NA
                 fit$slope <- NA
-                fit$k <- NA
-                fit$plat <- NA
-                fit$r2 <- NA
+                fit$k     <- NA
+                fit$plat  <- NA
+                fit$r2    <- NA
             }
 
             self$series[[replicate$name]] <- fit
         }
 
+        # Filter on total PSMs for sample
         if (psm_smp < min_smp_psm) {
             return( NULL )
         }
+        
+        # Handle merging of replicates (currently ALPHA and intentionally
+        # undocumented!)
 
-        if (merge_reps & length(merged_profile)>0) {
+        # HERE BE DRAGONS!
+        if (merge_reps & length(merged_profiles)>0) {
             
             sfs <- c()
             for (i in 1:(length(merged_temps)-1)) {
                 for (j in (i+1):length(merged_temps)) {
                     if (merged_temps[i] == merged_temps[j]) {
-                        sfs <- c(sfs,merged_profile[i]/merged_profile[j])
+                        sfs <- c(sfs,merged_profiles[i]/merged_profiles[j])
                     }
                 }
             }
-            foo <- merged_profile
-            bar <- merged_temps
+
+            # Here we renormalize the second sample to the first,
+            # ASSUMING only two samples of equal length !!!!
+            x.merged <- merged_temps
+            y.merged <- merged_profiles
             if (length(sfs)>0) {
                 sf <- sum(sfs)/length(sfs)
-                e <- length(merged_profile)
+                e <- length(merged_profiles)
                 p <- e/2+1
-                merged_profile[p:e] <- merged_profile[p:e] * sf
-                foo <- merged_profile
-                bar <- merged_temps
-                merged_profile <- merged_profile[order(merged_temps)]
-                merged_profile <- abs_to_ratio(merged_profile,method=method.denom)
-                merged_temps   <- merged_temps[order(merged_temps)]
+                merged_profiles[p:e] <- merged_profiles[p:e] * sf
+                x.merged <- merged_temps
+                y.merged <- merged_profiles
+                merged_profiles <- merged_profiles[order(merged_temps)]
+                merged_profiles <- abs_to_ratio(merged_profiles,method=method.denom)
+                merged_temps    <- merged_temps[order(merged_temps)]
             } 
 
-            fit <- try_fit(merged_profile,merged_temps,trim=trim,smooth=smooth)
+            fit <- try_fit(merged_profiles,merged_temps,trim=trim,smooth=smooth)
             fit$is.fitted <- !is.null(fit)
-            fit$foo <- foo
-            fit$bar <- bar
-
-            fit$psm    <- merged_sums
-            fit$splits <- merged_splits
-            fit$name   <- sample$name
-            fit$sample <- sample$name
-            fit$x      <- merged_temps
-            fit$y      <- merged_profile
+            fit$x.merged <- x.merged
+            fit$y.merged <- y.merged
+            fit$psm      <- merged_psms
+            fit$splits   <- merged_splits
+            fit$name     <- sample$name
+            fit$sample   <- sample$name
+            fit$x        <- merged_temps
+            fit$y        <- merged_profiles
 
             if (! fit$is.fitted) {
-                fit$tm <- NA
+                fit$tm    <- NA
                 fit$slope <- NA
-                fit$k <- NA
-                fit$plat <- NA
-                fit$r2 <- NA
+                fit$k     <- NA
+                fit$plat  <- NA
+                fit$r2    <- NA
             }
             self[['merged']][[sample$name]] <- fit
 
@@ -647,14 +667,18 @@ model_gene <- function( expt, gname,
 
     }
 
+    # Do final filtering on total PSMs for gene
+    if (psm_tot < min_tot_psm) {
+        return( NULL )
+    }
+
+    # If asked to merge reps, replace individual replicates with merged
+    # profiles
     if (merge_reps) {
         self$series <- self$merged
         self$merged <- NULL
     }
 
-    if (psm_tot < min_tot_psm) {
-        return( NULL )
-    }
     return( self )
 }
 
@@ -814,20 +838,20 @@ plot.MSThermResult <- function(result,
         i_sample <- which(result$sample_names == series$sample)
 
         # plot TM confidence intervals if requested
-        if (CI.Tm & ! is.merged) {
+        if (CI.Tm) {
             if (!is.null(series$tm_CI)) {
                 rect(series$tm_CI[1],-2,series$tm_CI[2],2,col=colors3[i_sample],border=F)
             }
         }
-        if (series$is.fitted & ! is.merged) {
+        if (series$is.fitted) {
             curve(sigmoid(series$plat, series$k, series$tm, x), col=col[i_sample], lwd=2, add=T)
             abline(v=series$tm,col=col[i_sample])
         }
 
         merged_splits <- series$splits
         for (i in 1:(length(merged_splits)-1)) {
-            x <- series$bar[(merged_splits[i]+1):merged_splits[i+1]]
-            y <- series$foo[(merged_splits[i]+1):merged_splits[i+1]]
+            x <- series$x.merged[(merged_splits[i]+1):merged_splits[i+1]]
+            y <- series$y.merged[(merged_splits[i]+1):merged_splits[i+1]]
             lines(x,y, lty=2, col=col[i_sample])
             points(x,y, pch=1, cex=0.8, col=col[i_sample])
         }
@@ -851,6 +875,7 @@ plot.MSThermResult <- function(result,
 
     }
 
+    l.dims <- legend("topright",legend=result$sample_names,fill=col,inset=0.02,cex=0.9,bg="white")
 
     if (table) {
 
@@ -879,7 +904,6 @@ plot.MSThermResult <- function(result,
         addtable2plot(t.x,t.y,table=tbl,bty="o",lwd=1,hlines=T,xjust=just.x,yjust=just.y,display.rownames=T,xpad=0.4,ypad=1.0,cex=0.7,bg="#FFFFFF77")
     }
 
-    l.dims <- legend("topright",legend=result$sample_names,fill=col,inset=0.02,cex=0.9,bg="white")
 
 
 }
