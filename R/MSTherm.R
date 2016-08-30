@@ -437,8 +437,9 @@ gen_description <- function(expt, gname, sep='|') {
 }
 
 model_gene <- function( expt, gname,
-  min_psms     = 1,
-  min_psm_tot  = 2,
+  min_rep_psm  = 0,
+  min_smp_psm  = 0,
+  min_tot_psm  = 0,
   max_inf      = 1,
   min_score,
   max_score,
@@ -473,6 +474,8 @@ model_gene <- function( expt, gname,
     n_samples <- length(expt$samples)
         
     for (i_sample in 1:n_samples) {
+
+        psm_smp <- 0
 
         sample <- expt$samples[[i_sample]]
         n_replicates <- length(sample$replicates)
@@ -515,7 +518,8 @@ model_gene <- function( expt, gname,
             quant <- quant[ok,]
 
             psm_tot <- psm_tot + nrow(sub)
-            if (nrow(sub) < min_psms) {
+            psm_smp <- psm_smp + nrow(sub)
+            if (nrow(sub) < min_rep_psm) {
                 return(NULL)
             }
             if (nrow(sub) < 1) {
@@ -573,9 +577,14 @@ model_gene <- function( expt, gname,
 
             self$series[[replicate$name]] <- fit
         }
+
+        if (psm_smp < min_smp_psm) {
+            return( NULL )
+        }
+
     }
 
-    if (psm_tot < min_psm_tot) {
+    if (psm_tot < min_tot_psm) {
         return( NULL )
     }
     return( self )
@@ -808,8 +817,12 @@ plot.MSThermResult <- function(result,
 #' @param genes A vector of gene/protein IDs to model (default is all genes). 
 #' @param np Number of parallel jobs to start (default = number of available
 #'   processors)
-#' @param min_psms Minimum number of spectral matches required for modeling
-#'   each replicate
+#' @param min_rep_psm Minimum number of spectral matches required for each
+#'   replicate to model protein
+#' @param min_smp_psm Minimum number of spectral matches required for each
+#'   sample to model protein
+#' @param min_tot_psm Minimum number of spectral matches required across all
+#'   replicates to model protein
 #' @param max_inf Maximum co-isolation interference level allowed to include a
 #'   spectrum in protein-level quantification
 #' @param min_score minimum score allowed to include a

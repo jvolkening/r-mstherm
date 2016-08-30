@@ -14,8 +14,14 @@ model_genes(expt, genes, np, ...)
 \item{np}{Number of parallel jobs to start (default = number of available
 processors)}
 
-\item{min_psms}{Minimum number of spectral matches required for modeling
-each replicate}
+\item{min_rep_psm}{Minimum number of spectral matches required for each
+replicate to model protein}
+
+\item{min_smp_psm}{Minimum number of spectral matches required for each
+sample to model protein}
+
+\item{min_tot_psm}{Minimum number of spectral matches required across all
+replicates to model protein}
 
 \item{max_inf}{Maximum co-isolation interference level allowed to include a
 spectrum in protein-level quantification}
