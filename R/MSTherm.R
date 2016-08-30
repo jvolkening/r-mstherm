@@ -455,6 +455,7 @@ model_gene <- function( expt, gname,
   trim         = 0,
   bootstrap    = 0,
   min_bs_psms  = 8,
+  merge_reps   = 0,
   annot_sep    = '|'
 ) {
 
@@ -487,8 +488,11 @@ model_gene <- function( expt, gname,
         n_replicates <- length(sample$replicates)
         self$sample_names[i_sample] <- sample$name
 
-        for (i_replicate in 1:n_replicates) {
+        merged_profile <- c()
+        merged_temps   <- c()
+        merged_sums    <- 0
 
+        for (i_replicate in 1:n_replicates) {
             
             replicate <- sample$replicates[[i_replicate]]
             replicate_total <- replicate_total + 1
@@ -531,8 +535,12 @@ model_gene <- function( expt, gname,
             if (nrow(sub) < 1) {
                 next
             }
-
             profile <- gen_profile(quant,method,method.denom=method.denom)
+
+            merged_profile <- c(merged_profile,profile)            
+            merged_temps   <- c(merged_temps,temps)            
+            merged_sums    <- merged_sums + nrow(sub)
+
             fit <- try_fit(profile,temps,trim=trim,smooth=smooth)
             fit$is.fitted <- !is.null(fit)
 
@@ -586,6 +594,46 @@ model_gene <- function( expt, gname,
 
         if (psm_smp < min_smp_psm) {
             return( NULL )
+        }
+
+        if (merge_reps & length(merged_profile)>0) {
+            
+            sfs <- c()
+            for (i in 1:(length(merged_temps)-1)) {
+                for (j in (i+1):length(merged_temps)) {
+                    if (merged_temps[i] == merged_temps[j]) {
+                        sfs <- c(sfs,merged_profile[i]/merged_profile[j])
+                    }
+                }
+            }
+            if (length(sfs)>0) {
+                sf <- sum(sfs)/length(sfs)
+                e <- length(merged_profile)
+                p <- e/2+1
+                merged_profile[p:e] <- merged_profile[p:e] * sf
+                merged_profile <- merged_profile[order(merged_temps)]
+                merged_profile <- abs_to_ratio(merged_profile,method=method.denom)
+                merged_temps   <- merged_temps[order(merged_temps)]
+            } 
+
+            fit <- try_fit(merged_profile,merged_temps,trim=trim,smooth=smooth)
+            fit$is.fitted <- !is.null(fit)
+
+            fit$psm    <- merged_sums
+            fit$name   <- sample$name
+            fit$sample <- sample$name
+            fit$x      <- merged_temps
+            fit$y      <- merged_profile
+
+            if (! fit$is.fitted) {
+                fit$tm <- NA
+                fit$slope <- NA
+                fit$k <- NA
+                fit$plat <- NA
+                fit$r2 <- NA
+            }
+            self[['merged']][[sample$name]] <- fit
+
         }
 
     }
@@ -744,6 +792,8 @@ plot.MSThermResult <- function(result,
     )
     mtext(result$annotation)
 
+    is.merged <- !is.null(result$merged)
+
     for (i_series in 1:length(result$series)) {
         
         series <- result$series[[i_series]]
@@ -752,12 +802,12 @@ plot.MSThermResult <- function(result,
         i_sample <- which(result$sample_names == series$sample)
 
         # plot TM confidence intervals if requested
-        if (CI.Tm) {
+        if (CI.Tm & ! is.merged) {
             if (!is.null(series$tm_CI)) {
                 rect(series$tm_CI[1],-2,series$tm_CI[2],2,col=colors3[i_sample],border=F)
             }
         }
-        if (series$is.fitted) {
+        if (series$is.fitted & ! is.merged) {
             curve(sigmoid(series$plat, series$k, series$tm, x), col=col[i_sample], lwd=2, add=T)
             abline(v=series$tm,col=col[i_sample])
         }
@@ -785,7 +835,7 @@ plot.MSThermResult <- function(result,
 
     l.dims <- legend("topright",legend=result$sample_names,fill=col,inset=0.02,cex=0.9,bg="white")
 
-    if (table) {
+    if (table & ! is.merged) {
 
         tm.mean <- suppressWarnings( mean( sapply(result$series, '[[', "tm"), na.rm=T ) )
         lims <- par('usr')
@@ -806,10 +856,58 @@ plot.MSThermResult <- function(result,
         tbl <- matrix(rep(0,length(result$series)*3),ncol=3)
         tbl[,1] <- sapply(result$series, function(x) ifelse(is.null(x$psm),NA,x$psm))
         tbl[,2] <- round(sapply(result$series, function(x) ifelse(is.null(x$tm),NA,x$tm)),1)
-        tbl[,3] <- round(sapply(result$series, function(x) ifelse(is.null(x$inf),NA,x$inf)),2)
-        colnames(tbl) <- c("PSM",expression(T[m]),"Inf")
+        tbl[,3] <- round(sapply(result$series, function(x) ifelse(is.null(x$slope),NA,x$slope)),2)
+        colnames(tbl) <- c("PSM",expression(T[m]),"Slp")
         rownames(tbl) <- sapply(result$series, '[[', "name")
         addtable2plot(t.x,t.y,table=tbl,bty="o",lwd=1,hlines=T,xjust=just.x,yjust=just.y,display.rownames=T,xpad=0.4,ypad=1.0,cex=0.7,bg="#FFFFFF77")
+    }
+
+    if (is.merged) {
+        for (i_series in 1:length(result$merged)) {
+            
+            series <- result$merged[[i_series]]
+            if (is.null(series)) { next () }
+
+            i_sample <- which(result$sample_names == series$sample)
+
+            # plot TM confidence intervals if requested
+            if (series$is.fitted) {
+                curve(sigmoid(series$plat, series$k, series$tm, x), col=col[i_sample], lwd=2, add=T)
+                abline(v=series$tm,col=col[i_sample])
+            }
+
+            #points(series, pch=2, col=col[i_sample])
+
+        }
+
+        l.dims <- legend("topright",legend=result$sample_names,fill=col,inset=0.02,cex=0.9,bg="white")
+
+        if (table) {
+
+            tm.mean <- suppressWarnings( mean( sapply(result$merged, '[[', "tm"), na.rm=T ) )
+            lims <- par('usr')
+            if (!is.na(tm.mean) & tm.mean < (result$tmax+result$tmin)/2) {
+                t.x <- lims[2] - ( lims[2] - lims[1] )*0.02
+                t.y <- l.dims$rect$top - l.dims$rect$h - ( lims[4] - lims[3] )*0.02
+                just.x <- 1
+                just.y <- 0
+            }
+            else {
+                t.x <- lims[1] + ( lims[2] - lims[1] )*0.02
+                t.y <- lims[3] + ( lims[4] - lims[3] )*0.02
+                just.x <- 0
+                just.y <- 1
+            }
+
+            l <- length(result$merged)*3
+            tbl <- matrix(rep(0,length(result$merged)*3),ncol=3)
+            tbl[,1] <- sapply(result$merged, function(x) ifelse(is.null(x$psm),NA,x$psm))
+            tbl[,2] <- round(sapply(result$merged, function(x) ifelse(is.null(x$tm),NA,x$tm)),1)
+            tbl[,3] <- round(sapply(result$merged, function(x) ifelse(is.null(x$slope),NA,x$slope)),2)
+            colnames(tbl) <- c("PSM",expression(T[m]),"Slp")
+            rownames(tbl) <- sapply(result$merged, '[[', "name")
+            addtable2plot(t.x,t.y,table=tbl,bty="o",lwd=1,hlines=T,xjust=just.x,yjust=just.y,display.rownames=T,xpad=0.4,ypad=1.0,cex=0.7,bg="#FFFFFF77")
+        }
     }
 
 
