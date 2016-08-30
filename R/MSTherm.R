@@ -236,15 +236,21 @@ as.data.frame.MSThermResultSet <- function( set ) {
         row.names = sapply(set, '[[', "name")
     )
     df$annotation <- sapply(set, '[[', "annotation")
-    repl_names <- sapply(set[[1]]$series, '[[', "name")
+
+    repl_lists <- lapply(set, function(d)
+        unique(sapply( d$series, '[[', "name" )))
+    repl_names <- unique(unlist(repl_lists))
+    repl_names <- repl_names[order(repl_names)]
+
+    #repl_names <- sapply(set[[1]]$series, '[[', "name")
     for (r in repl_names) {
         x <- set[1]$series[[r]][['x']]
 
         for(foo in c("tm","psm","inf","slope","k","plat","r2")) {
             df[[paste0(r,'.',foo)]]  <- sapply(set, function(v) v$series[[r]][[foo]])
-            for (i in 1:length(x)) {
-                df[[paste0(r,'.',x[i])]]  <- sapply(set, function(v) v$series[[r]][['y.fit']][i])
-            }
+            #for (i in 1:length(x)) {
+                #df[[paste0(r,'.',x[i])]]  <- sapply(set, function(v) v$series[[r]][['y.fit']][i])
+            #}
         }
     }
 
