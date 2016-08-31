@@ -632,12 +632,20 @@ model_gene <- function( expt, gname,
             x.merged <- merged_temps
             y.merged <- merged_profiles
             if (length(sfs)>0) {
-                sf <- sum(sfs)/length(sfs)
+                #sf <- sum(sfs)/length(sfs)
+                sf <- median(sfs)
                 e <- length(merged_profiles)
                 p <- e/2+1
                 merged_profiles[p:e] <- merged_profiles[p:e] * sf
+                trim.l <- floor( (length(sfs)+1)/2 )
+                trim.r <- floor( (length(sfs)+0)/2 )
+                if (trim.l > 0) {
+                    merged_profiles <- merged_profiles[-((p-trim.l):(p+trim.r-1))]
+                    merged_temps    <- merged_temps[-((p-trim.l):(p+trim.r-1))]
+                }
                 x.merged <- merged_temps
                 y.merged <- merged_profiles
+
                 merged_profiles <- merged_profiles[order(merged_temps)]
                 merged_profiles <- abs_to_ratio(merged_profiles,method=method.denom)
                 merged_temps    <- merged_temps[order(merged_temps)]
@@ -848,13 +856,13 @@ plot.MSThermResult <- function(result,
             abline(v=series$tm,col=col[i_sample])
         }
 
-        merged_splits <- series$splits
-        for (i in 1:(length(merged_splits)-1)) {
-            x <- series$x.merged[(merged_splits[i]+1):merged_splits[i+1]]
-            y <- series$y.merged[(merged_splits[i]+1):merged_splits[i+1]]
-            lines(x,y, lty=2, col=col[i_sample])
-            points(x,y, pch=1, cex=0.8, col=col[i_sample])
-        }
+        #merged_splits <- series$splits
+        #for (i in 1:(length(merged_splits)-1)) {
+            #x <- series$x.merged[(merged_splits[i]+1):merged_splits[i+1]]
+            #y <- series$y.merged[(merged_splits[i]+1):merged_splits[i+1]]
+            lines(series, lty=2, col=col[i_sample])
+            points(series, pch=1, cex=0.8, col=col[i_sample])
+        #}
 
         # plot point confidence intervals if requested
         if (CI.points) {
@@ -986,7 +994,6 @@ model_genes <- function(expt,genes,np,...) {
     }
 
     pb <- txtProgressBar(min=0,max=length(proteins),style=3)
-        
     results <-
     foreach(i=1:length(proteins),.export=c(
         "model_gene",
