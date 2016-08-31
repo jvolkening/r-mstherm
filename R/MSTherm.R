@@ -246,8 +246,13 @@ as.data.frame.MSThermResultSet <- function( set ) {
     for (r in repl_names) {
         x <- set[1]$series[[r]][['x']]
 
+<<<<<<< HEAD
         for(foo in c("tm","psm","inf","slope","k","plat","r2")) {
             df[[paste0(r,'.',foo)]]  <- sapply(set, function(v) v$series[[r]][[foo]])
+=======
+        for(col in c("tm","psm","inf","slope","k","plat","r2","rmsd")) {
+            df[[paste0(r,'.',col)]]  <- sapply(set, function(v) v$series[[r]][[col]])
+>>>>>>> de35c88... fixed R2 calc and added RMSD calc
             #for (i in 1:length(x)) {
                 #df[[paste0(r,'.',x[i])]]  <- sapply(set, function(v) v$series[[r]][['y.fit']][i])
             #}
@@ -956,7 +961,8 @@ try_fit <- function(ratios,temps,trim,smooth) {
             y.fit <- sigmoid(obj$plat,obj$k,obj$tm,temps)
             obj$y.fit <- y.fit
             obj$resid <- ratios - y.fit
-            obj$r2 <- 1-(sum(obj$resid^2)/(9*var(ratios)))
+            obj$r2 <- 1-(sum(obj$resid^2)/(length(ratios)*var(ratios)))
+            obj$rmsd <- sqrt( sum(obj$resid^2)/length(ratios) )
             return(obj)
         },error = function(e) {})
     }
