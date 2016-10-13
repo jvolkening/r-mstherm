@@ -3,7 +3,7 @@
 #' @importFrom graphics par plot points rect mtext lines curve legend arrows
 #'  abline
 #' @importFrom utils read.delim txtProgressBar setTxtProgressBar
-#' @importFrom parallel detectCores makeCluster stopCluster
+#' @importFrom parallel detectCores
 #' @importFrom foreach foreach "%dopar%"
 #' @importFrom doParallel registerDoParallel
 #' @importFrom RColorBrewer brewer.pal
@@ -1047,11 +1047,8 @@ plot.MSThermResult <- function(
 model_experiment <- function(expt,proteins,np,...) {
 
     # parallel processing details
-    #suppressMessages(library(doParallel))
-    #suppressMessages(library(foreach))
     np <- ifelse( !missing(np), np, detectCores() )
-    cl <- makeCluster(np,outfile="")
-    registerDoParallel(cl,cores=np)
+    registerDoParallel(cores=np)
 
     if (missing(proteins)) {
         protein_lists <- lapply(expt$samples,function(d)
@@ -1079,7 +1076,6 @@ model_experiment <- function(expt,proteins,np,...) {
             return(res)
         },error = function(e) {print(e)})
     }
-    stopCluster(cl)
     close(pb)
     names(results) <- sapply(results, '[[', "name")
     self <- structure(
