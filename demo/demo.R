@@ -1,0 +1,5 @@
+library(MSTherm)
+expt <- MSThermExperiment("control.tsv", annotations="annots.tsv")
+expt <- normalize_to_std(expt, "cRAP_ALBU_BOVIN")
+res <- model_experiment(expt, bootstrap=T, smooth=T, min_rep_psm=3)
+plot(res$P38707)
