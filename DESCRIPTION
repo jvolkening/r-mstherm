@@ -19,5 +19,6 @@ Imports:
     RColorBrewer,
     plotrix
 Suggests:
-    RSQLite
+    RSQLite,
+    testthat
 RoxygenNote: 5.0.1
