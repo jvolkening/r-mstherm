@@ -1214,10 +1214,10 @@ try_fit <- function(ratios,temps,trim,smooth) {
             fit <-
             nls2(y~sigmoid(p,k,m,x),data=list(x=x,y=y),start=mod,control=nls.control(warnOnly=F),algorithm="port",lower=c(0,1,10),upper=c(0.4,100000,100))
             obj <- list()
-            obj$plat <- coefficients(fit)[1]
-            obj$k <- coefficients(fit)[2]
-            obj$tm <- coefficients(fit)[3]
-            obj$slope <- sigmoid.d1(obj$plat,obj$k,obj$tm,obj$tm)
+            obj$plat  <- as.numeric(coefficients(fit)[1])
+            obj$k     <- as.numeric(coefficients(fit)[2])
+            obj$tm    <- as.numeric(coefficients(fit)[3])
+            obj$slope <- as.numeric(sigmoid.d1(obj$plat,obj$k,obj$tm,obj$tm))
             y.fit <- sigmoid(obj$plat,obj$k,obj$tm,temps)
             obj$y.fit <- y.fit
             obj$resid <- ratios - y.fit
