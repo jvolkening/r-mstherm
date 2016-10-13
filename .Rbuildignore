@@ -1,3 +1,4 @@
 ^\.travis\.yml$
 ^\.git
 ^\.R(history|Data)$
+^pre_git$
