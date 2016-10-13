@@ -22,7 +22,9 @@ protein standard (assumed to be present in equimolar amounts in each
 channel)
 }
 \examples{
+\dontrun{
 expt <- normalize_to_profile(expt, conc, model=T)
+}
 
 }
 

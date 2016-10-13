@@ -1,8 +1,8 @@
-Package: MSTherm
+Package: mstherm
 Type: Package
 Title: Analyze MS/MS protein melting data
-Version: 0.4.4
-Date: 2016-08-27
+Version: 0.4.5
+Date: 2016-10-12
 Authors@R: person("Jeremy","Volkening", email="jdv@base2bio.com",
     role=c("aut","cre"))
 Description: Software to aid in modeling and analyzing mass-spectrometry-based
@@ -10,11 +10,14 @@ Description: Software to aid in modeling and analyzing mass-spectrometry-based
     thermal behavior is modeled at the protein level. Functions exist to
     simplify visualization, exploratory analysis, and analsysis of melting
     temperature shifts.
-License: GPLv3
+License: GPL-3
 Imports:
+    foreach,
+    parallel,
+    doParallel,
     nls2,
     RColorBrewer,
-    plotrix,
-    doParallel,
-    foreach
+    plotrix
+Suggests:
+    RSQLite
 RoxygenNote: 5.0.1

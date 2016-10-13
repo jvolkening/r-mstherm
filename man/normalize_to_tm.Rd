@@ -19,7 +19,9 @@ Normalizes each replicate of an experiment based on linear regression
 of calculated Tm (corrects for remaining systematic error)
 }
 \examples{
+\dontrun{
 expt <- normalize_to_tm(expt, res)
+}
 
 }
 

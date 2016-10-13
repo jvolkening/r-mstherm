@@ -54,7 +54,9 @@ Both parameters can take either a dataframe or a filename on disk
   and "annotation" can contain any text (generally a functional description)
 }
 \examples{
-expt  <- MSThermExperiment(control="expt_1.control",annotations="protein_annots.tsv")
+\dontrun{
+expt    <- MSThermExperiment(control="control.tsv",annotations="annots.tsv")
+}
 
 }
 
