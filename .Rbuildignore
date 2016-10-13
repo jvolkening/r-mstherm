@@ -1,0 +1,3 @@
+^\.travis\.yml$     # Travis CI config
+^\.git              # git config files/dirs
+^\.R(history|Data)  # session files
