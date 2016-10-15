@@ -1,3 +1,12 @@
+#' @title Model and analyze MS/MS-based protein melting data.
+#'
+#' @description \code{mstherm} is a package for modeling and analysis of MS/MS-based
+#' thermal proteome profiling (TPP) experiments.
+#'
+#' @name mstherm
+#' @author Jeremy Volkening \email{jdv@@base2bio.com}
+#' @docType package
+#'
 #' @importFrom stats coefficients density dnorm loess mad median nls.control
 #'  p.adjust pnorm quantile var
 #' @importFrom graphics par plot points rect mtext lines curve legend arrows
@@ -9,30 +18,49 @@
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom nls2 nls2
 #' @importFrom plotrix addtable2plot
+NULL
 
-#----------------------------------------------------------------------------#
-# Generate ratio values from absolute quantitation
-#
-# data   : vector of absolute quantitation values
-# method : how to calculate reference value
-#----------------------------------------------------------------------------#
 
-abs_to_ratio <- function(data,method='first') {
+#' @title Convert absolute quantitation to relative ratios
+#'
+#' @description \code{abs_to_ratio} takes a vector of absolute values and
+#' returns a vector of ratios relative to some starting point.
+#'
+#' @param x vector of numeric absolute quantitation values
+#' @param method method to use to determine starting value (denominator)
+#'
+#' @details The denominator used to calculate relative protein concentrations
+#'   can affect the ability to model noisy data. In the theoretically ideal
+#'   scenario, everything would be relative to the lowest temperature point.
+#'   However, other methods can be used to help alleviate problems related to
+#'   noise. Available methods include:
+#'     \describe{
+#'        \item{"first"}{Use the first value (lowest temperature point)
+#'          (default)}
+#'        \item{"max"}{Use the maximum value}
+#'        \item{"top3"}{Use the mean of the three highest values}
+#'        \item{"near"}{Use the median of all values greater than 80% of
+#'          the first value}
+#'     }
+#'
+#' @return A numeric vector of the same length as input
+
+abs_to_ratio <- function(x, method='first') {
 
     denom <- switch( method,
-        first  = data[1],
-        max    = max(data),
-        top3   = mean( data[ order(data,decreasing=T)[1:3] ] ),
-        near   = median( data[ data > data[1]*0.8 ] ),
-        compat = {
-                m <- mean( data[ order(data,decreasing=T)[1:3] ] )
-                b <- mean( data[ data > m*0.8 & data < m*1.2 ] )
-                ifelse(is.na(b),m,b)
-            },
+        first  = x[1],
+        max    = max(x),
+        top3   = mean( x[ order(x,decreasing=T)[1:3] ] ),
+        near   = median( x[ x > x[1]*0.8 ] ),
+        #compat = {
+                #m <- mean( x[ order(x,decreasing=T)[1:3] ] )
+                #b <- mean( x[ x > m*0.8 & x < m*1.2 ] )
+                #ifelse(is.na(b),m,b)
+            #},
         stop("Invalid method type",call.=T)
     )
 
-    return( data/denom )
+    return( x/denom )
 
 }
 
@@ -45,26 +73,52 @@ abs_to_ratio <- function(data,method='first') {
 # ...    : parameters passed to 'abs_to_ratio'
 #----------------------------------------------------------------------------#
 
-gen_profile <- function( data, method='sum', method.denom='first' ) {
+#' @title Generate protein ratio profile from spectrum quantification matrix
+#'
+#' @description \code{gen_profile} takes a matrix of spectrum channel
+#' quantification values belonging to a protein and "rolls them up" into a
+#' vector of protein-level relative quantification values
+#'
+#' @param x matrix of spectrum quantification values, one row per spectrum and
+#' one column per channel
+#' @param method method to use to "roll up" spectrum values to protein level
+#' @param method.denom method used to determine ratio denominator, passed as
+#' the "method" argument to \code{abs_to_ratio}
+#'
+#' @details The following methods for spectrum-to-protein conversion are
+#' supported:
+#'     \describe{
+#'        \item{"sum"}{use the sum of the Spectrum values for each channel}
+#'        \item{"median"}{use the median of the spectrum values for each
+#'          channel}
+#'        \item{"ratio.median"}{Like "median", but values for each spectrum
+#'          are first converted to ratios according to "method.denom"
+#'          channel}
+#'        \item{"ratio.mean"}{Like "ratio.median" but using mean of ratios
+#'     }
+#'
+#' @return A numeric vector of the same length as the number of matrix columns
+
+gen_profile <- function( x, method='sum', method.denom='first' ) {
 
     summarized <- switch( method,
-        sum = apply(data, 2, sum),
-        median = apply(data, 2, median),
+        sum    = apply(x, 2, sum),
+        median = apply(x, 2, median),
         # for these, the inner apply() will transpose, so the outer is applied
         # to rows rather than columns
         ratio.median = 
-            apply( apply(data,1,abs_to_ratio,method=method.denom),1,median ),
+            apply( apply(x,1,abs_to_ratio,method=method.denom),1,median ),
         ratio.mean = 
-            apply( apply(data,1,abs_to_ratio,method=method.denom),1,mean ),
+            apply( apply(x,1,abs_to_ratio,method=method.denom),1,mean ),
         stop("Invalid method type", call.=T)
     )
     return( abs_to_ratio(summarized, method=method.denom) )
 
 }
 
-#' Create a new MSThermExperiment
+#' @title Create a new MSThermExperiment
 #'
-#' Creates a new experiment object from a set of filenames or dataframes
+#' @description Creates a new experiment object from a set of filenames or dataframes
 #'
 #' @param control dataframe or filename to tab-delimited table describing the
 #'    experimental setup and locations of data on disk (see Details)
@@ -160,6 +214,11 @@ MSThermExperiment <- function(control, annotations) {
 
 }
 
+#----------------------------------------------------------------------------#
+# These constructors are not called directly and thus are not documented in
+# detail
+#----------------------------------------------------------------------------#
+
 MSThermSample <- function(name) {
 
     self <- structure( list( name = name,replicates = list() ),
@@ -197,7 +256,8 @@ MSThermReplicate <- function(name, data, meta, wd) {
 
 }
 
-add_replicates <- function(sample,replicates) {
+# populate MSThermSample object with child replicates
+add_replicates <- function(sample, replicates) {
 
     names(replicates) <- sapply(replicates, '[[', "name")
     sample$replicates = c(sample$replicates, replicates)
@@ -205,7 +265,8 @@ add_replicates <- function(sample,replicates) {
 
 }
 
-add_samples <- function(expt,samples) {
+# populate MSThermExperiment object with child samples
+add_samples <- function(expt, samples) {
 
     names(samples) <- sapply(samples, '[[', "name")
     expt$samples = c(expt$samples, samples)
@@ -222,23 +283,24 @@ add_samples <- function(expt,samples) {
     }
     return(str)
 }
-    
-sigShift <- function( df, repl1, repl2, bin ) {
+   
+# currently unused
+#sigShift <- function( df, repl1, repl2, bin ) {
+#
+#   deltas <- df[[paste0(repl2,'.tm')]] - df[[paste0(repl1,'.tm')]]
+#   m <- median(deltas,na.rm=T)
+#   d <- mad(deltas,na.rm=T)
+#   print(m)
+#   print(d)
+#   z <- (deltas - m)/d
+#   p <- 2*pnorm(-abs(z))
+#   q <- p.adjust(p,method="BH")
+#   plot(density(deltas,na.rm=T),xlim=c(-10,10))
+#   x <- NULL; rm(x) # silence R CMD check noise due to curve() call below
+#   curve(dnorm(x,mean=m,sd=d),col="red",add=T)
+#   return(q)
 
-    deltas <- df[[paste0(repl2,'.tm')]] - df[[paste0(repl1,'.tm')]]
-    m <- median(deltas,na.rm=T)
-    d <- mad(deltas,na.rm=T)
-    print(m)
-    print(d)
-    z <- (deltas - m)/d
-    p <- 2*pnorm(-abs(z))
-    q <- p.adjust(p,method="BH")
-    plot(density(deltas,na.rm=T),xlim=c(-10,10))
-    x <- NULL; rm(x) # silence R CMD check noise due to curve() call below
-    curve(dnorm(x,mean=m,sd=d),col="red",add=T)
-    return(q)
-
-} 
+# 
     
 #' MSResultSet to data frame
 #'
@@ -1107,8 +1169,6 @@ model_experiment <- function(expt,proteins,np,...) {
 
 write.sqlite <- function( res, file ) {
 
-    #library("RSQLite")
-
     if (requireNamespace("RSQLite")) {
 
         con <- RSQLite::dbConnect(RSQLite::SQLite(), file)
@@ -1189,8 +1249,6 @@ write.sqlite <- function( res, file ) {
 
 try_fit <- function(ratios,temps,trim,smooth) {
 
-    #library(nls2, quietly=T)
-
     x <- temps
     y <- ratios
 
@@ -1245,8 +1303,6 @@ sigmoid.d1 <- function(p,k,m,x) {
 
 norm_to_profile <- function(replicate,profile,model=T) {
 
-    #library(RColorBrewer, quietly=T)
-    #library(nls2, quietly=T)
     cols <- brewer.pal(3,"Set1")
 
     quant_columns <- match(replicate$meta$channel,colnames(replicate$data))
