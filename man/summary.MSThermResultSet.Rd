@@ -2,22 +2,27 @@
 % Please edit documentation in R/MSTherm.R
 \name{summary.MSThermResultSet}
 \alias{summary.MSThermResultSet}
-\title{Summarize MSThermResultSet object}
+\title{Summarize MSThermResultSet object.}
 \usage{
-\method{summary}{MSThermResultSet}(set)
+\method{summary}{MSThermResultSet}(object, ...)
 }
 \arguments{
-\item{set}{An MSThermResultSet object}
+\item{object}{an MSThermResultSet object}
+
+\item{...}{additional arguments passed to or from other functions}
 }
 \value{
 Nothing
 }
 \description{
-Print a summary of an MSThermResultSet, including samples and parameters
+Print a summary of an MSThermResultSet, including samples and
+parameters.
 }
 \examples{
-res  <- model_genes(expt)
+\dontrun{
+res  <- model_experiment(expt)
 summmary(res)
+}
 
 }
 

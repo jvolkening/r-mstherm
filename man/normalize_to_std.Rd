@@ -2,25 +2,27 @@
 % Please edit documentation in R/MSTherm.R
 \name{normalize_to_std}
 \alias{normalize_to_std}
-\title{Normalize to a spike-in standard}
+\title{Normalize to a spike-in standard.}
 \usage{
-normalize_to_std(expt, gname, ...)
+normalize_to_std(expt, protein)
 }
 \arguments{
-\item{expt}{An MSThermExperiment object}
+\item{expt}{an MSThermExperiment object}
 
-\item{gname}{Name of a protein to normalize against}
+\item{protein}{ID of a protein to normalize against}
 }
 \value{
 An MsThermExperiment object with normalized data slots
 }
 \description{
-Normalizes each replicate of an experiment based on a given spike-in
-protein standard (assumed to be present in equimolar amounts in each
-channel)
+Normalizes each replicate of an experiment based on a given
+spike-in protein standard (assumed to be present in equimolar amounts in
+each channel).
 }
 \examples{
-expt <- normalize_to_std(expt, "bovine_serum_albumin")
+\dontrun{
+expt <- normalize_to_std(expt, "cRAP_ALBU_BOVIN")
+}
 
 }
 

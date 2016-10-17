@@ -2,20 +2,21 @@
 % Please edit documentation in R/MSTherm.R
 \name{plot.MSThermResultSet}
 \alias{plot.MSThermResultSet}
-\title{Plot MSThermResultSet object}
+\title{Plot MSThermResultSet object.}
 \usage{
-\method{plot}{MSThermResultSet}(set, ...)
+\method{plot}{MSThermResultSet}(x, ...)
 }
 \arguments{
-\item{set}{An MSThermResultSet object}
+\item{x}{an MSThermResultSet object}
 
-\item{...}{Other parameters are passed through to plot.MSThermResult}
+\item{...}{other parameters are passed through to plot.MSThermResult}
 }
 \value{
 Nothing
 }
 \description{
-Generate a series of denaturation plots for all results in an MSThermResultSet
+Generate a series of denaturation plots for all results in an
+MSThermResultSet.
 }
 \details{
 Since this function makes multiple sequential calls to
@@ -24,8 +25,10 @@ Since this function makes multiple sequential calls to
   will only overwrite the previous output.
 }
 \examples{
-res  <- model_genes(expt)
+\dontrun{
+res  <- model_experiment(expt)
 plot(res)
+}
 
 }
 

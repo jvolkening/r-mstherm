@@ -16,5 +16,5 @@ In Linux, do:
     cd r-MSTherm
     R CMD INSTALL
 
-You will probably need to install some prerequisites first, which the
-installer will tell you about.
+You may need to install some prerequisites first depending on your environment
+-- the installer will notify you of this.

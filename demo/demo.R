@@ -1,0 +1,8 @@
+library(mstherm)
+control <- system.file("extdata", "demo_project/control.tsv", package="mstherm")
+annots <- system.file("extdata", "demo_project/annots.tsv", package="mstherm")
+print(control)
+expt <- MSThermExperiment(control, annotations=annots)
+expt <- normalize_to_std(expt, "cRAP_ALBU_BOVIN")
+res <- model_experiment(expt, bootstrap=T, smooth=T, min_rep_psm=3)
+plot(res$P38707)

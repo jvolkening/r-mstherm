@@ -2,27 +2,28 @@
 % Please edit documentation in R/MSTherm.R
 \name{normalize_to_profile}
 \alias{normalize_to_profile}
-\title{Normalize to a profile}
+\title{Normalize to a profile.}
 \usage{
-normalize_to_profile(expt, profile, model)
+normalize_to_profile(replicate, profile, model)
 }
 \arguments{
-\item{expt}{An MSThermExperiment object}
+\item{replicate}{An MSThermReplicate object}
 
 \item{profile}{A vector of relative values}
 
 \item{model}{Whether to fit scale factors to model}
 }
 \value{
-An MsThermExperiment object with normalized data slots
+An MsThermReplicate object with normalized data slots
 }
 \description{
-Normalizes each replicate of an experiment based on a given spike-in
-protein standard (assumed to be present in equimolar amounts in each
-channel)
+Normalizes an MSThermReplicate based on a pre-determined
+vector of relative abundances
 }
 \examples{
-expt <- normalize_to_profile(expt, conc, model=T)
+\dontrun{
+expt$ <- normalize_to_profile(expt, concentrations, model=T)
+}
 
 }
 

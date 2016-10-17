@@ -2,23 +2,27 @@
 % Please edit documentation in R/MSTherm.R
 \name{as.data.frame.MSThermResultSet}
 \alias{as.data.frame.MSThermResultSet}
-\title{MSResultSet to data frame}
+\title{MSResultSet to data frame.}
 \usage{
-\method{as.data.frame}{MSThermResultSet}(set)
+\method{as.data.frame}{MSThermResultSet}(x, ...)
 }
 \arguments{
-\item{set}{An MSResultSet object}
+\item{x}{an MSResultSet object}
+
+\item{...}{additional arguments passed to or from other functions}
 }
 \value{
-A dataframe populated with relevant information per result
+A data frame populated with relevant information per result
 }
 \description{
-Populates a dataframe with information from an MSResultSet, one row per
-protein/group
+Populates a data frame with information from an MSResultSet,
+one row per protein/group
 }
 \examples{
-df  <- as.data.frame(expt)
+\dontrun{
+df <- as.data.frame(expt)
 write.table(df, "results.tsv")
+}
 
 }
 

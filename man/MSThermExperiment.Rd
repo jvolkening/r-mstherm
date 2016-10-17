@@ -2,15 +2,15 @@
 % Please edit documentation in R/MSTherm.R
 \name{MSThermExperiment}
 \alias{MSThermExperiment}
-\title{Create a new MSThermExperiment}
+\title{Create a new MSThermExperiment.}
 \usage{
 MSThermExperiment(control, annotations)
 }
 \arguments{
-\item{control}{dataframe or filename to tab-delimited table describing the
+\item{control}{data frame or filename of tab-delimited table describing the
 experimental setup and locations of data on disk (see Details)}
 
-\item{annotations}{dataframe or filename to tab-delimited table containing
+\item{annotations}{data frame or filename to tab-delimited table containing
 protein names and annotations (usually functional descriptions but can be
 any text}
 }
@@ -18,12 +18,13 @@ any text}
 An MSThermExperiment object
 }
 \description{
-Creates a new experiment object from a set of filenames or dataframes
+\code{MSThermExperiment} creates a new experiment object from
+  a set of filenames or data frames.
 }
 \details{
-Both parameters can take either a dataframe or a filename on disk
-  (which will be read into a dataframe). "control" should contain
-  columns with the following headers (in any order):
+Both parameters can take either a data frame or a tab-delimited
+  filename on disk (which will be read into a data frame). "control" should
+  contain columns with the following headers (in any order):
     \describe{
        \item{"name"}{Unique identifier of a single replicate}
        \item{"sample"}{Sample name that a replicate belongs to}
@@ -41,6 +42,8 @@ Both parameters can take either a dataframe or a filename on disk
      \item{"protein"}{Protein or protein group to which the peptide belongs}
      \item{"coelute_inf"}{Calculated precursor co-isolation interference
         (0.0-1.0)}
+     \item{"score"}{Calculated precursor co-isolation interference
+        (0.0-1.0)}
      \item{"..."}{One column per isobaric channel, containing absolute
         quantification values. Column names must match those in the
         "channel" column of the meta file, with the exception that R will
@@ -54,7 +57,9 @@ Both parameters can take either a dataframe or a filename on disk
   and "annotation" can contain any text (generally a functional description)
 }
 \examples{
-expt  <- MSThermExperiment(control="expt_1.control",annotations="protein_annots.tsv")
+\dontrun{
+expt    <- MSThermExperiment(control="control.tsv",annotations="annots.tsv")
+}
 
 }
 

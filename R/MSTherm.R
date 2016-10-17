@@ -1,68 +1,41 @@
-#----------------------------------------------------------------------------#
-# Generate ratio values from absolute quantitation
-#
-# data   : vector of absolute quantitation values
-# method : how to calculate reference value
-#----------------------------------------------------------------------------#
-
-abs_to_ratio <- function(data,method='first') {
-
-    denom <- switch( method,
-        first  = data[1],
-        max    = max(data),
-        top3   = mean( data[ order(data,decreasing=T)[1:3] ] ),
-        near   = median( data[ data > data[1]*0.8 ] ),
-        compat = {
-                m <- mean( data[ order(data,decreasing=T)[1:3] ] )
-                b <- mean( data[ data > m*0.8 & data < m*1.2 ] )
-                ifelse(is.na(b),m,b)
-            },
-        stop("Invalid method type",call.=T)
-    )
-
-    return( data/denom )
-
-}
-
-
-#----------------------------------------------------------------------------#
-# Generate protein ratio profile from matrix of spectrum quantification values
-#
-# data   : data frame or matrix of quantification values, one row per spectrum
-# method : how to roll up spectrum data into protein-level data
-# ...    : parameters passed to 'abs_to_ratio'
-#----------------------------------------------------------------------------#
-
-gen_profile <- function( data, method='sum', method.denom='first' ) {
-
-    summarized <- switch( method,
-        sum = apply(data, 2, sum),
-        median = apply(data, 2, median),
-        # for these, the inner apply() will transpose, so the outer is applied
-        # to rows rather than columns
-        ratio.median = 
-            apply( apply(data,1,abs_to_ratio,method=method.denom),1,median ),
-        ratio.mean = 
-            apply( apply(data,1,abs_to_ratio,method=method.denom),1,mean ),
-        stop("Invalid method type", call.=T)
-    )
-    return( abs_to_ratio(summarized, method=method.denom) )
-
-}
-
-#' Create a new MSThermExperiment
+#' @title Model and analyze MS/MS-based protein melting data.
 #'
-#' Creates a new experiment object from a set of filenames or dataframes
+#' @description \code{mstherm} is a package for modeling and analysis of MS/MS-based
+#' thermal proteome profiling (TPP) experiments.
 #'
-#' @param control dataframe or filename to tab-delimited table describing the
-#'    experimental setup and locations of data on disk (see Details)
-#' @param annotations dataframe or filename to tab-delimited table containing
+#' @name mstherm
+#' @author Jeremy Volkening \email{jdv@@base2bio.com}
+#' @docType package
+#'
+#' @importFrom stats coefficients density dnorm loess mad median nls.control
+#'  p.adjust pnorm quantile var
+#' @importFrom graphics par plot points rect mtext lines curve legend arrows
+#'  abline
+#' @importFrom utils read.delim txtProgressBar setTxtProgressBar
+#' @importFrom parallel detectCores
+#' @importFrom foreach foreach "%dopar%"
+#' @importFrom doParallel registerDoParallel
+#' @importFrom RColorBrewer brewer.pal
+#' @importFrom nls2 nls2
+#' @importFrom plotrix addtable2plot
+NULL
+
+
+
+#' @title Create a new MSThermExperiment.
+#'
+#' @description \code{MSThermExperiment} creates a new experiment object from
+#'   a set of filenames or data frames.
+#'
+#' @param control data frame or filename of tab-delimited table describing the
+#'   experimental setup and locations of data on disk (see Details)
+#' @param annotations data frame or filename to tab-delimited table containing
 #'   protein names and annotations (usually functional descriptions but can be
 #'   any text
 #'
-#' @details Both parameters can take either a dataframe or a filename on disk
-#'   (which will be read into a dataframe). "control" should contain
-#'   columns with the following headers (in any order):
+#' @details Both parameters can take either a data frame or a tab-delimited
+#'   filename on disk (which will be read into a data frame). "control" should
+#'   contain columns with the following headers (in any order):
 #'     \describe{
 #'        \item{"name"}{Unique identifier of a single replicate}
 #'        \item{"sample"}{Sample name that a replicate belongs to}
@@ -80,6 +53,8 @@ gen_profile <- function( data, method='sum', method.denom='first' ) {
 #'      \item{"protein"}{Protein or protein group to which the peptide belongs}
 #'      \item{"coelute_inf"}{Calculated precursor co-isolation interference
 #'         (0.0-1.0)}
+#'      \item{"score"}{Calculated precursor co-isolation interference
+#'         (0.0-1.0)}
 #'      \item{"..."}{One column per isobaric channel, containing absolute
 #'         quantification values. Column names must match those in the
 #'         "channel" column of the meta file, with the exception that R will
@@ -95,7 +70,9 @@ gen_profile <- function( data, method='sum', method.denom='first' ) {
 #' @return An MSThermExperiment object
 #'
 #' @examples
-#' expt  <- MSThermExperiment(control="expt_1.control",annotations="protein_annots.tsv")
+#'\dontrun{
+#' expt    <- MSThermExperiment(control="control.tsv",annotations="annots.tsv")
+#'}
 #'
 #' @export
 
@@ -111,20 +88,18 @@ MSThermExperiment <- function(control, annotations) {
        
     # read in and populate annotations if present
     if (!missing(annotations)) {
-        annotations <- .to_dataframe(annotations)
-        if (! is.data.frame(annotations)) {
-            stop("annotations must be a valid filename or data.frame")
-        }
-        self$annot <- annotations
+        self$annot <- .to_dataframe(annotations)
     }
 
-    # return empty object if no control file/dataframe specified
+    # return empty object if no control file/data frame specified
     if (missing(control)) { return(self) }
 
-    control <- .to_dataframe(control)
-    if (! is.data.frame(control)) {
-        stop("control must be a valid filename or data.frame")
+   
+    wd <- getwd()
+    if (is.character(control)) {
+        wd <- dirname(normalizePath(control))
     }
+    control <- .to_dataframe(control)
 
     sample_names <- unique(control$sample)
     self <- add_samples( expt=self, samples = lapply(
@@ -136,7 +111,8 @@ MSThermExperiment <- function(control, annotations) {
                     repl <- MSThermReplicate(
                         name      = r,
                         data = control$data_file[control$name == r],
-                        meta = control$meta_file[control$name == r]
+                        meta = control$meta_file[control$name == r],
+                        wd   = wd
                     )
                 }
             ))
@@ -147,6 +123,13 @@ MSThermExperiment <- function(control, annotations) {
 
 }
 
+
+
+#----------------------------------------------------------------------------#
+# These constructors are not called directly and thus are not documented in
+# detail
+#----------------------------------------------------------------------------#
+
 MSThermSample <- function(name) {
 
     self <- structure( list( name = name,replicates = list() ),
@@ -156,11 +139,21 @@ MSThermSample <- function(name) {
 
 }
 
-MSThermReplicate <- function(name, data, meta) {
+
+
+MSThermReplicate <- function(name, data, meta, wd) {
+
+    # data and meta paths are relative to the control filename, if given,
+    # so temporarily switch to that directory
+    wd_old <- getwd()
+    setwd(wd)
 
     data <- .to_dataframe(data)
     meta <- .to_dataframe(meta)
     meta <- meta[order(meta$temp,decreasing=F),]
+
+    # and switch back
+    setwd(wd_old)
 
     self <- structure(
         list(
@@ -176,77 +169,135 @@ MSThermReplicate <- function(name, data, meta) {
 
 }
 
-add_replicates <- function(sample,replicates) {
 
-    names(replicates) <- sapply(replicates, '[[', "name")
-    sample$replicates = c(sample$replicates, replicates)
-    return(sample)
+
+#' @title Convert absolute quantitation to relative ratios.
+#'
+#' @description \code{abs_to_ratio} takes a vector of absolute values and
+#' returns a vector of ratios relative to some starting point.
+#'
+#' @param x vector of numeric absolute quantitation values
+#' @param method method to use to determine starting value (denominator)
+#'
+#' @details The denominator used to calculate relative protein concentrations
+#'   can affect the ability to model noisy data. In the theoretically ideal
+#'   scenario, everything would be relative to the lowest temperature point.
+#'   However, other methods can be used to help alleviate problems related to
+#'   noise. Available methods include:
+#'     \describe{
+#'        \item{"first"}{Use the first value (lowest temperature point)
+#'          (default)}
+#'        \item{"max"}{Use the maximum value}
+#'        \item{"top3"}{Use the mean of the three highest values}
+#'        \item{"near"}{Use the median of all values greater than 80% of
+#'          the first value}
+#'     }
+#'
+#' @return A numeric vector of the same length as input
+#' @keywords internal
+
+abs_to_ratio <- function(x, method='first') {
+
+    denom <- switch( method,
+        first  = x[1],
+        max    = max(x),
+        top3   = mean( x[ order(x,decreasing=T)[1:3] ] ),
+        near   = median( x[ x > x[1]*0.8 ] ),
+        #compat = {
+                #m <- mean( x[ order(x,decreasing=T)[1:3] ] )
+                #b <- mean( x[ x > m*0.8 & x < m*1.2 ] )
+                #ifelse(is.na(b),m,b)
+            #},
+        stop("Invalid method type",call.=T)
+    )
+
+    return( x/denom )
 
 }
 
-add_samples <- function(expt,samples) {
 
-    names(samples) <- sapply(samples, '[[', "name")
-    expt$samples = c(expt$samples, samples)
-    return(expt)
+
+#' @title Generate protein ratio profile from spectrum quantification matrix.
+#'
+#' @description \code{gen_profile} takes a matrix of spectrum channel
+#' quantification values belonging to a protein and "rolls them up" into a
+#' vector of protein-level relative quantification values.
+#'
+#' @param x matrix of spectrum quantification values, one row per spectrum and
+#' one column per channel
+#' @param method method to use to "roll up" spectrum values to protein level
+#' @param method.denom method used to determine ratio denominator, passed as
+#' the "method" argument to \code{abs_to_ratio}
+#'
+#' @details The following methods for spectrum-to-protein conversion are
+#' supported:
+#'     \describe{
+#'        \item{"sum"}{use the sum of the Spectrum values for each channel}
+#'        \item{"median"}{use the median of the spectrum values for each
+#'          channel}
+#'        \item{"ratio.median"}{Like "median", but values for each spectrum
+#'          are first converted to ratios according to "method.denom"
+#'          channel}
+#'        \item{"ratio.mean"}{Like "ratio.median" but using mean of ratios}
+#'     }
+#'
+#' @return A numeric vector of the same length as the number of matrix columns
+#' @keywords internal
+
+gen_profile <- function( x, method='sum', method.denom='first' ) {
+
+    summarized <- switch( method,
+        sum    = apply(x, 2, sum),
+        median = apply(x, 2, median),
+        # for these, the inner apply() will transpose, so the outer is applied
+        # to rows rather than columns
+        ratio.median = 
+            apply( apply(x,1,abs_to_ratio,method=method.denom),1,median ),
+        ratio.mean = 
+            apply( apply(x,1,abs_to_ratio,method=method.denom),1,mean ),
+        stop("Invalid method type", call.=T)
+    )
+    return( abs_to_ratio(summarized, method=method.denom) )
 
 }
 
-.to_dataframe <- function(str) {
-    if (is.character(str)) {
-        str <- read.delim(str,stringsAsFactors=F,header=T,comment.char="#")
-    }
-    return(str)
-}
-    
-sigShift <- function( df, repl1, repl2, bin ) {
 
-    deltas <- df[[paste0(repl2,'.tm')]] - df[[paste0(repl1,'.tm')]]
-    m <- median(deltas,na.rm=T)
-    d <- mad(deltas,na.rm=T)
-    print(m)
-    print(d)
-    z <- (deltas - m)/d
-    p <- 2*pnorm(-abs(z))
-    q <- p.adjust(p,method="BH")
-    plot(density(deltas,na.rm=T),xlim=c(-10,10))
-    curve(dnorm(x,mean=m,sd=d),col="red",add=T)
-    return(q)
 
-} 
-    
-#' MSResultSet to data frame
+#' @title MSResultSet to data frame.
 #'
-#' Populates a dataframe with information from an MSResultSet, one row per
-#' protein/group
+#' @description Populates a data frame with information from an MSResultSet,
+#' one row per protein/group
 #'
-#' @param set An MSResultSet object
+#' @param x an MSResultSet object
+#' @param ... additional arguments passed to or from other functions
 #'
-#' @return A dataframe populated with relevant information per result
+#' @return A data frame populated with relevant information per result
 #'
 #' @examples
-#' df  <- as.data.frame(expt)
+#'\dontrun{
+#' df <- as.data.frame(expt)
 #' write.table(df, "results.tsv")
+#'}
 #'
 #' @export
 
-as.data.frame.MSThermResultSet <- function( set ) {
+as.data.frame.MSThermResultSet <- function( x, ... ) {
 
     df <- data.frame(
-        row.names = sapply(set, '[[', "name")
+        row.names = sapply(x, '[[', "name")
     )
-    df$annotation <- sapply(set, '[[', "annotation")
+    df$annotation <- sapply(x, '[[', "annotation")
 
-    repl_lists <- lapply(set, function(d)
+    repl_lists <- lapply(x, function(d)
         unique(sapply( d$series, '[[', "name" )))
     repl_names <- unique(unlist(repl_lists))
     repl_names <- repl_names[order(repl_names)]
 
     for (r in repl_names) {
-        x <- set[1]$series[[r]][['x']]
+        x <- x[1]$series[[r]][['x']]
 
         for(col in c("tm","psm","inf","slope","k","plat","r2","rmsd")) {
-            df[[paste0(r,'.',col)]]  <- sapply(set, function(v) v$series[[r]][[col]])
+            df[[paste0(r,'.',col)]]  <- sapply(x, function(v) v$series[[r]][[col]])
         }
     }
 
@@ -254,10 +305,22 @@ as.data.frame.MSThermResultSet <- function( set ) {
 
 } 
 
-#' Re-normalize based on Tm
+
+
+#' @title Re-normalize based on Tm.
 #'
-#' Normalizes each replicate of an experiment based on linear regression
-#' of calculated Tm (corrects for remaining systematic error)
+#' @description Normalizes each replicate of an experiment based on linear
+#' regression of calculated Tm (corrects for remaining systematic error).
+#'
+#' @details An assumption can be made in most TPP experiments using a single
+#' organism that the Tm of most proteins should not be changing. However,
+#' global shifts have been observed between replicates, presumably due to
+#' technical variance, which complicate data interpretation. This method
+#' attempts to remove this source of error by doing a bootstrap
+#' renormalization of the quantification values based on pairwise linear
+#' regression between calculated Tms of each replicate. A reference set of Tms
+#' is calculated based on all replicates, and each replicate is normalized to
+#' this based on the calculated slope and intercept of the input data.
 #'
 #' @param expt An MSThermExperiment object
 #' @param res An MSThermResultSet object
@@ -265,7 +328,9 @@ as.data.frame.MSThermResultSet <- function( set ) {
 #' @return An MsThermExperiment object with re-normalized data slots
 #'
 #' @examples
+#'\dontrun{
 #' expt <- normalize_to_tm(expt, res)
+#'}
 #'
 #' @export
 
@@ -333,23 +398,27 @@ normalize_to_tm <- function( expt, res ) {
 
 }
 
-#' Normalize to a spike-in standard
+
+
+#' @title Normalize to a spike-in standard.
 #'
-#' Normalizes each replicate of an experiment based on a given spike-in
-#' protein standard (assumed to be present in equimolar amounts in each
-#' channel)
+#' @description Normalizes each replicate of an experiment based on a given
+#' spike-in protein standard (assumed to be present in equimolar amounts in
+#' each channel).
 #'
-#' @param expt An MSThermExperiment object
-#' @param gname Name of a protein to normalize against
+#' @param expt an MSThermExperiment object
+#' @param protein ID of a protein to normalize against
 #'
 #' @return An MsThermExperiment object with normalized data slots
 #'
 #' @examples
-#' expt <- normalize_to_std(expt, "bovine_serum_albumin")
+#'\dontrun{
+#' expt <- normalize_to_std(expt, "cRAP_ALBU_BOVIN")
+#'}
 #'
 #' @export
 
-normalize_to_std <- function( expt, gname, ... ) {
+normalize_to_std <- function( expt, protein ) {
 
     n_replicates <- length(unlist(lapply(expt$samples,
         "[[", "replicates"),recursive=F))
@@ -370,7 +439,7 @@ normalize_to_std <- function( expt, gname, ... ) {
             
             replicate <- sample$replicates[[i_replicate]]
             expt$samples[[i_sample]]$replicates[[i_replicate]]$data <-
-                norm_to_std(replicate,gname)
+                norm_to_std(replicate,protein)
 
         }
 
@@ -380,65 +449,97 @@ normalize_to_std <- function( expt, gname, ... ) {
 
 }
 
-#' Normalize to a profile
+
+
+#' @title Normalize to a profile.
 #'
-#' Normalizes each replicate of an experiment based on a given spike-in
-#' protein standard (assumed to be present in equimolar amounts in each
-#' channel)
+#' @description Normalizes an MSThermReplicate based on a pre-determined
+#' vector of relative abundances
 #'
-#' @param expt An MSThermExperiment object
+#' @param replicate An MSThermReplicate object
 #' @param profile A vector of relative values
 #' @param model Whether to fit scale factors to model
 #'
-#' @return An MsThermExperiment object with normalized data slots
+#' @return An MsThermReplicate object with normalized data slots
 #'
 #' @examples
-#' expt <- normalize_to_profile(expt, conc, model=T)
+#'\dontrun{
+#' expt$ <- normalize_to_profile(expt, concentrations, model=T)
+#'}
 #'
 #' @export
 
-normalize_to_profile <- function( expt, profile, model ) {
+normalize_to_profile <- function( replicate, profile, model ) {
 
-    n_replicates <- length(unlist(lapply(expt$samples,
-        "[[", "replicates"),recursive=F))
-    n_rows <- 1;
-    while (n_rows*(n_rows+1) < n_replicates) {
-        n_rows <- n_rows + 1
-    }
-    par(mfrow=c(n_rows,n_rows))
-
-    n_samples <- length(expt$samples)
-        
-    for (i_sample in 1:n_samples) {
-
-        sample <- expt$samples[[i_sample]]
-        n_replicates <- length(sample$replicates)
-
-        for (i_replicate in 1:n_replicates) {
-            
-            replicate <- sample$replicates[[i_replicate]]
-            expt$samples[[i_sample]]$replicates[[i_replicate]]$data <-
-                norm_to_profile(replicate,profile, model)
-
-        }
-
-    }
-
-    return( expt )
+    replicate$data <- norm_to_profile(replicate,profile, model)
+    return( replicate )
 
 }
 
-gen_description <- function(expt, gname, sep='|') {
 
-    parts <- strsplit(gname,sep,fixed=T)[[1]]
-    desc <- sapply(parts, function(x) ifelse( x %in% expt$annot$name,
-        expt$annot$annotation[expt$annot$name == x],
-        ''))
-    return(paste(desc,collapse=sep))
 
-}
+#' @title Model single protein.
+#'
+#' @description Model a single protein from an MSThermExperiment object.
+#'
+#' @param expt An MSThermExperiment object
+#' @param protein ID of the protein to model
+#' @param min_rep_psm Minimum number of spectral matches required for each
+#'   replicate to model protein
+#' @param min_smp_psm Minimum number of spectral matches required for each
+#'   sample to model protein
+#' @param min_tot_psm Minimum number of spectral matches required across all
+#'   replicates to model protein
+#' @param max_inf Maximum co-isolation interference level allowed to include a
+#'   spectrum in protein-level quantification
+#' @param min_score minimum score allowed to include a
+#'   spectrum in protein-level quantification
+#' @param max_score maximum score allowed to include a
+#'   spectrum in protein-level quantification
+#' @param smooth (t/F) Perform loess smoothing on the data prior to modeling
+#' @param method Protein quantification method to use (see Details)
+#' @param method.denom Method used to calculate denominator of abundance
+#'   (see Details)
+#' @param trim (t/F) Trim all lower data points less than the abundance maximum
+#' @param bootstrap (T/F) Perform bootstrap analysis to determine confidence
+#'   intervals (slow)
+#' @param min_bs_psms Minimum number of spectral matches required to perform
+#'   bootstrapping
+#' @param merge_reps Treat replicates as overlapping temperature series and
+#'   and merge into single series (EXPERIMENTAL!)
+#' @param annot_sep Symbol used to separate protein group IDs (used for
+#'   retrieval of annotations) (default: '|')
+#'
+#' @details Valid quantification methods include:
+#'     \describe{
+#'        \item{"sum"}{use the sum of the spectrum values for each channel}
+#'        \item{"median"}{use the median of the spectrum values for each
+#'          channel}
+#'        \item{"ratio.median"}{Like "median", but values for each spectrum
+#'          are first converted to ratios according to "method.denom"
+#'          channel}
+#'        \item{"ratio.mean"}{Like "ratio.median" but using mean of ratios}
+#'     }
+#' Valid denominator methods include:
+#'     \describe{
+#'        \item{"first"}{Use the first value (lowest temperature point)
+#'          (default)}
+#'        \item{"max"}{Use the maximum value}
+#'        \item{"top3"}{Use the mean of the three highest values}
+#'        \item{"near"}{Use the median of all values greater than 80% of
+#'          the first value}
+#'     }
+#'
+#' @return MSThermResult object
+#'
+#' @examples
+#'\dontrun{
+#' p01  <- model_protein(expt, protein="protein01", smooth=T, bootstrap=F)
+#'}
+#'
+#' @export
 
-model_gene <- function( expt, gname,
+model_protein <- function( expt, protein,
   min_rep_psm  = 0,
   min_smp_psm  = 0,
   min_tot_psm  = 0,
@@ -451,12 +552,13 @@ model_gene <- function( expt, gname,
   trim         = 0,
   bootstrap    = 0,
   min_bs_psms  = 8,
+  merge_reps   = 0,
   annot_sep    = '|'
 ) {
 
     self <- structure(
         list(
-            name         = gname,
+            name         = protein,
             series       = list(),
             sample_names = c(),
             parameters   = as.list(environment())
@@ -465,30 +567,31 @@ model_gene <- function( expt, gname,
     )
     self$parameters[['expt']] <- NULL
 
-    desc <- gen_description(expt, gname, sep=annot_sep)
-    self$annotation <- desc
+    self$annotation <- gen_description(expt, protein, sep=annot_sep)
 
-    res_cols_per_repl <- 28
-    tbl_cols_per_repl <- 6
-
-    replicate_total <- 0
-    psm_tot <- 0
+    psm_tot   <- 0 # track total PSMs for protein
     n_samples <- length(expt$samples)
         
     for (i_sample in 1:n_samples) {
 
-        psm_smp <- 0
+        psm_smp <- 0 # track total PSMs for sample
 
         sample <- expt$samples[[i_sample]]
         n_replicates <- length(sample$replicates)
         self$sample_names[i_sample] <- sample$name
 
-        for (i_replicate in 1:n_replicates) {
+        # Track combined data for using "merge_reps"
+        merged_profiles <- c()
+        merged_temps   <- c()
+        merged_splits  <- c(0)
+        merged_psms    <- 0
 
+        # Process each replicate
+        for (i_replicate in 1:n_replicates) {
             
             replicate <- sample$replicates[[i_replicate]]
-            replicate_total <- replicate_total + 1
-            
+           
+            # Set score range if not yet defined
             if ("score" %in% colnames(replicate$data)) {
                 if (missing(max_score)) {
                     max_score = max(replicate$data$score)
@@ -499,6 +602,8 @@ model_gene <- function( expt, gname,
             }
 
             temps <- replicate$meta$temp
+
+            # Track global min and max temperature points for the protein
             if (is.null(self$tmin) || self$tmin > min(temps)) {
                 self$tmin <- min(temps)
             }
@@ -506,36 +611,54 @@ model_gene <- function( expt, gname,
                 self$tmax <- max(temps)
             }
 
-            sub <- replicate$data[which(replicate$data$protein == gname
+            # Pull out matching data points passing coisolation and score
+            # thresholds
+            sub <- replicate$data[which(replicate$data$protein == protein
                 & replicate$data$coelute_inf <= max_inf),];
             if ("score" %in% colnames(sub)) {
                 sub <- sub[which( sub$score >= min_score & sub$score <= max_score ),]
             }
 
+            # Reorder channels based on metadata
             quant_columns <- match(replicate$meta$channel,colnames(sub))
             quant <- sub[,quant_columns]
 
-            ok <- apply(quant,1,function(v) {all(!is.na(v)) & any(v>0)})
-            sub <- sub[ok,]
+            # Filter out rows with NA or with all zero values
+            ok    <- apply(quant,1,function(v) {all(!is.na(v)) & any(v>0)})
+            sub   <- sub[ok,]
             quant <- quant[ok,]
 
-            psm_tot <- psm_tot + nrow(sub)
-            psm_smp <- psm_smp + nrow(sub)
-            if (nrow(sub) < min_rep_psm) {
+            n_psms  <- nrow(sub)
+
+            # Update PSM totals and check cutoffs
+            psm_tot <- psm_tot + n_psms
+            psm_smp <- psm_smp + n_psms
+            if (n_psms < min_rep_psm) {
                 return(NULL)
             }
-            if (nrow(sub) < 1) {
+
+            # Obviously don't try to model if no rows pass filtering
+            if (n_psms < 1) {
                 next
             }
 
             profile <- gen_profile(quant,method,method.denom=method.denom)
-            fit <- try_fit(profile,temps,trim=trim,smooth=smooth)
+
+            # Updated merged variables for use with merge_reps
+            merged_profiles <- c(merged_profiles,profile)
+            merged_temps    <- c(merged_temps,temps)
+            merged_splits   <- c(merged_splits, length(merged_temps))
+            merged_psms     <- merged_psms + n_psms
+
+            fit <- try_fit(profile, temps, trim=trim, smooth=smooth)
             fit$is.fitted <- !is.null(fit)
 
             # calculate weighted co-inf
-            sums       <- apply(quant,1,sum)
+            sums       <- apply(quant, 1, sum)
             fit$inf    <- sum(sub$coelute_inf * sums) / sum(sums)
-            fit$psm    <- nrow(sub)
+
+            # keep track of other data for later use
+            fit$psm    <- n_psms
             fit$name   <- replicate$name
             fit$sample <- sample$name
             fit$x      <- temps
@@ -543,7 +666,7 @@ model_gene <- function( expt, gname,
 
             if (fit$is.fitted) {
 
-                #bootstrap
+                #bootstrap if asked
                 bs <- c()
                 iterations <- 20
                 bs.ratios <- matrix(nrow=iterations,ncol=length(profile))
@@ -569,150 +692,206 @@ model_gene <- function( expt, gname,
                 }
 
             }
+
+            # If unfitted, these variables still need to be set but should be NA
             else {
-                fit$tm <- NA
+                fit$tm    <- NA
                 fit$slope <- NA
-                fit$k <- NA
-                fit$plat <- NA
-                fit$r2 <- NA
+                fit$k     <- NA
+                fit$plat  <- NA
+                fit$r2    <- NA
             }
 
             self$series[[replicate$name]] <- fit
         }
 
+        # Filter on total PSMs for sample
         if (psm_smp < min_smp_psm) {
             return( NULL )
         }
+        
+        # Handle merging of replicates (currently ALPHA and intentionally
+        # undocumented!)
+
+        # HERE BE DRAGONS!
+        if (merge_reps & length(merged_profiles)>0) {
+            
+            sfs <- c()
+            for (i in 1:(length(merged_temps)-1)) {
+                for (j in (i+1):length(merged_temps)) {
+                    if (merged_temps[i] == merged_temps[j]) {
+                        sfs <- c(sfs,merged_profiles[i]/merged_profiles[j])
+                    }
+                }
+            }
+
+            # Here we renormalize the second sample to the first,
+            # ASSUMING only two samples of equal length !!!!
+            x.merged <- merged_temps
+            y.merged <- merged_profiles
+            if (length(sfs)>0) {
+                #sf <- sum(sfs)/length(sfs)
+                sf <- median(sfs)
+                e <- length(merged_profiles)
+                p <- e/2+1
+                merged_profiles[p:e] <- merged_profiles[p:e] * sf
+                trim.l <- floor( (length(sfs)+1)/2 )
+                trim.r <- floor( (length(sfs)+0)/2 )
+                if (trim.l > 0) {
+                    merged_profiles <- merged_profiles[-((p-trim.l):(p+trim.r-1))]
+                    merged_temps    <- merged_temps[-((p-trim.l):(p+trim.r-1))]
+                }
+                x.merged <- merged_temps
+                y.merged <- merged_profiles
+
+                merged_profiles <- merged_profiles[order(merged_temps)]
+                merged_profiles <- abs_to_ratio(merged_profiles,method=method.denom)
+                merged_temps    <- merged_temps[order(merged_temps)]
+            } 
+
+            fit <- try_fit(merged_profiles,merged_temps,trim=trim,smooth=smooth)
+            fit$is.fitted <- !is.null(fit)
+            fit$x.merged <- x.merged
+            fit$y.merged <- y.merged
+            fit$psm      <- merged_psms
+            fit$splits   <- merged_splits
+            fit$name     <- sample$name
+            fit$sample   <- sample$name
+            fit$x        <- merged_temps
+            fit$y        <- merged_profiles
+
+            if (! fit$is.fitted) {
+                fit$tm    <- NA
+                fit$slope <- NA
+                fit$k     <- NA
+                fit$plat  <- NA
+                fit$r2    <- NA
+            }
+            self[['merged']][[sample$name]] <- fit
+
+        }
 
     }
 
+    # Do final filtering on total PSMs for protein
     if (psm_tot < min_tot_psm) {
         return( NULL )
     }
+
+    # If asked to merge reps, replace individual replicates with merged
+    # profiles
+    if (merge_reps) {
+        self$series <- self$merged
+        self$merged <- NULL
+    }
+
     return( self )
 }
 
-#' Plot MSThermResultSet object
+
+
+#' @title Model MSThermExperiment.
 #'
-#' Generate a series of denaturation plots for all results in an MSThermResultSet
+#' @description Model multiple proteins from an MSThermExperiment object.
 #'
-#' @param set An MSThermResultSet object
-#' @param ... Other parameters are passed through to plot.MSThermResult
-#' 
-#' @details Since this function makes multiple sequential calls to
-#'   plot.MSThermResult, it is usually used in conjunction with a multipage
-#'   graphics device such as \code{"pdf()"}. Otherwise each subsequent call
-#'   will only overwrite the previous output.
+#' @param expt An MSThermExperiment object
+#' @param proteins A vector of protein IDs to model (default is all
+#'   proteins). 
+#' @param np Number of parallel jobs to start (default = number of available
+#'   processors)
+#' @param ... Parameters passed to model_protein()
 #'
-#' @return Nothing
+#' @return MSThermResultSet object
 #'
 #' @examples
-#' res  <- model_genes(expt)
-#' plot(res)
+#'\dontrun{
+#' res  <- model_proteins(expt,proteins=c("Q03262","P32582"))
+#' res  <- model_proteins(expt,np=1)
+#'}
 #'
 #' @export
 
-plot.MSThermResultSet <- function(set,...) {
+model_experiment <- function(expt,proteins,np,...) {
 
-    sapply(set, plot, ...)
-    return(invisible(NULL))
+    # parallel processing details
+    np <- ifelse( !missing(np), np, detectCores() )
+    registerDoParallel(cores=np)
+
+    if (missing(proteins)) {
+        protein_lists <- lapply(expt$samples,function(d)
+            unique(sapply(d$replicates, function(l) {l$data$protein})) )
+        # proteins <- Reduce(union, protein_lists)
+        proteins <- unique(unlist(protein_lists))
+    }
+
+    pb <- txtProgressBar(min=0,max=length(proteins),style=3)
+    i <- NULL; rm(i) # silence R CMD check noise due to foreach() call below
+    results <-
+    foreach(i=1:length(proteins),.export=c(
+        "model_protein",
+        "abs_to_ratio",
+        "gen_profile",
+        "try_fit",
+        "sigmoid",
+        "sigmoid.d1",
+        "gen_description"
+    )) %dopar% {
+        protein <- proteins[i]
+        setTxtProgressBar(pb,i)
+        tryCatch( {
+            res <- model_protein(expt,protein,...)
+            return(res)
+        },error = function(e) {print(e)})
+    }
+    close(pb)
+    names(results) <- sapply(results, '[[', "name")
+    self <- structure(
+        results[!sapply(results,is.null)],
+        class = "MSThermResultSet"
+    )
+    return( self )
 
 }
 
-#' Summarize MSThermResult object
+
+
+#' @title Plot MSThermResult object.
 #'
-#' Print a summary of an MSThermResult, including samples and parameters
+#' @description Generate a denaturation plot for an modeled protein/group.
 #'
-#' @param result An MSThermResult object
+#' @param x An MSThermResult object
+#' @param table (T/f) include table of per-replicate parameters
+#' @param col array of colors used to plot samples
+#' @param CI.points (T/F) plot temperature point confidence intervals
+#' @param CI.Tm (T/F) plot Tm confidence intervals
+#' @param ... other parameters passed through to plot()
 #'
 #' @return Nothing
 #'
 #' @examples
-#' m  <- model_gene(expt,"P12345")
-#' summmary(m)
-#'
-#' @export
-
-summary.MSThermResult <- function(result) {
-
-    cat(paste("Name:",result$name),"\n",sep='')
-    cat("Samples:\n");
-    for (i in result$sample_names) {
-        cat("    ",i,"\n",sep='')
-    }
-    cat("Parameters:\n");
-    for (i in names(result$parameters)) {
-        cat("    ",i,": ",result$parameters[[i]],"\n",sep='')
-    }
-
-    return(invisible(NULL))
-
-}
-
-#' Summarize MSThermResultSet object
-#'
-#' Print a summary of an MSThermResultSet, including samples and parameters
-#'
-#' @param set An MSThermResultSet object
-#'
-#' @return Nothing
-#'
-#' @examples
-#' res  <- model_genes(expt)
-#' summmary(res)
-#'
-#' @export
-
-summary.MSThermResultSet <- function(set) {
-
-    result <- set[[1]]
-    cat("Samples:\n");
-    for (i in result$sample_names) {
-        cat("    ",i,"\n",sep='')
-    }
-    cat("Parameters:\n");
-    for (i in names(result$parameters)) {
-        if (i != 'gname') {
-            cat("    ",i,": ",result$parameters[[i]],"\n",sep='')
-        }
-    }
-
-    return(invisible(NULL))
-
-}
-    
-#' Plot MSThermResult object
-#'
-#' Generate a denaturation plot for an modeled protein/group
-#'
-#' @param result An MSThermResult object
-#' @param table (T/F) Include table of per-replicate parameters
-#' @param col Array of colors used to plot samples
-#' @param CI.points (T/F) Plot temperature point confidence intervals
-#' @param CI.Tm (T/F) Plot Tm confidence intervals
-#'    intervals
-#'
-#' @return Nothing
-#'
-#' @examples
-#' m  <- model_gene(expt,"P12345")
+#'\dontrun{
+#' m  <- model_protein(expt,"P38707")
 #' plot(m)
+#'}
 #'
 #' @export
 
-plot.MSThermResult <- function(result,
+plot.MSThermResult <- function(
+    x,
     table=T,
     col,
     CI.points=T,
     CI.Tm=T,
-    ...) {
+    ...
+    ) {
+
+    # object argument must be called 'x' to satisfy S3 rules, but we'll use a
+    # more descriptive variable onwards
+    result <- x
 
     if (length(result$series) < 1) {
         return(NULL)
     }
-
-    library(RColorBrewer, quietly=T)
-    library(plotrix, quietly=T)
 
     if (missing(col)) {
         col <- brewer.pal(max(3,length(result$sample_names)),"Set1") 
@@ -758,7 +937,13 @@ plot.MSThermResult <- function(result,
             abline(v=series$tm,col=col[i_sample])
         }
 
-        lines(series, lty=2, col=col[i_sample])
+        #merged_splits <- series$splits
+        #for (i in 1:(length(merged_splits)-1)) {
+            #x <- series$x.merged[(merged_splits[i]+1):merged_splits[i+1]]
+            #y <- series$y.merged[(merged_splits[i]+1):merged_splits[i+1]]
+            lines(series, lty=2, col=col[i_sample])
+            points(series, pch=1, cex=0.8, col=col[i_sample])
+        #}
 
         # plot point confidence intervals if requested
         if (CI.points) {
@@ -802,130 +987,298 @@ plot.MSThermResult <- function(result,
         tbl <- matrix(rep(0,length(result$series)*3),ncol=3)
         tbl[,1] <- sapply(result$series, function(x) ifelse(is.null(x$psm),NA,x$psm))
         tbl[,2] <- round(sapply(result$series, function(x) ifelse(is.null(x$tm),NA,x$tm)),1)
-        tbl[,3] <- round(sapply(result$series, function(x) ifelse(is.null(x$inf),NA,x$inf)),2)
-        colnames(tbl) <- c("PSM",expression(T[m]),"Inf")
+        tbl[,3] <- round(sapply(result$series, function(x) ifelse(is.null(x$slope),NA,x$slope)),2)
+        colnames(tbl) <- c("PSM",expression(T[m]),"Slp")
         rownames(tbl) <- sapply(result$series, '[[', "name")
         addtable2plot(t.x,t.y,table=tbl,bty="o",lwd=1,hlines=T,xjust=just.x,yjust=just.y,display.rownames=T,xpad=0.4,ypad=1.0,cex=0.7,bg="#FFFFFF77")
     }
 
-
 }
 
-#' Model MSThermExperiment
+
+
+#' @title Plot MSThermResultSet object.
 #'
-#' Model one or more proteins in an MSThermExperiment object
+#' @description Generate a series of denaturation plots for all results in an
+#' MSThermResultSet.
 #'
-#' @param expt An MSThermExperiment object
-#' @param genes A vector of gene/protein IDs to model (default is all genes). 
-#' @param np Number of parallel jobs to start (default = number of available
-#'   processors)
-#' @param min_rep_psm Minimum number of spectral matches required for each
-#'   replicate to model protein
-#' @param min_smp_psm Minimum number of spectral matches required for each
-#'   sample to model protein
-#' @param min_tot_psm Minimum number of spectral matches required across all
-#'   replicates to model protein
-#' @param max_inf Maximum co-isolation interference level allowed to include a
-#'   spectrum in protein-level quantification
-#' @param min_score minimum score allowed to include a
-#'   spectrum in protein-level quantification
-#' @param max_score maximum score allowed to include a
-#'   spectrum in protein-level quantification
-#' @param smooth (T/F) Perform loess smoothing on the data prior to modeling
-#' @param method Protein quantification method to use (see Details)
-#' @param method.denom Method used to calculate denominator of abundance
-#'   (see Details)
-#' @param bootstrap (T/F) Perform bootstrap analysis to determine confidence
-#'   intervals (slow)
-#' @param min_bs_psms Minimum number of spectral matches required to perform
-#'   bootstrapping
-#' @param annot_sep Symbol used to separate protein group IDs (used for
-#'   retrieval of annotations) (default: '|')
+#' @param x an MSThermResultSet object
+#' @param ... other parameters are passed through to plot.MSThermResult
+#' 
+#' @details Since this function makes multiple sequential calls to
+#'   plot.MSThermResult, it is usually used in conjunction with a multipage
+#'   graphics device such as \code{"pdf()"}. Otherwise each subsequent call
+#'   will only overwrite the previous output.
 #'
-#' @details Valid quantification methods include:
-#'   \describe{
-#'      \item{"sum"}{Absolute sums for all spectra in each channel are used
-#'         to calculate ratios}
-#'      \item{"median"}{Median absolute intensities for spectra in each channel are used
-#'         to calculate ratios}
-#'      \item{"ratio.median"}{Ratios are calculated for each spectrum and
-#'         the median ratio for each channel is used}
-#'      \item{"ratio.mean"}{Ratios are calculated for each spectrum and
-#'         the mean ratio for each channel is used}
-#'   }
-#' Valid denominator methods include:
-#'   \describe{
-#'      \item{"first"}{Use the value of the lowest temperature}
-#'      \item{"max"}{Use the largest value}
-#'      \item{"top3"}{Use the mean of the three largest values}
-#'      \item{"near"}{Add description}
-#'   }
-#'
-#' @return MSThermResultSet object
+#' @return Nothing
 #'
 #' @examples
-#' res  <- model_genes(expt,genes=c("gene01","gene02"))
-#' res  <- model_genes(expt,np=4)
+#'\dontrun{
+#' res  <- model_experiment(expt)
+#' plot(res)
+#'}
 #'
 #' @export
 
-model_genes <- function(expt,genes,np,...) {
+plot.MSThermResultSet <- function(x, ...) {
 
-    # parallel processing details
-    suppressMessages(library(doParallel))
-    suppressMessages(library(foreach))
-    np <- ifelse( !missing(np), np, detectCores() )
-    cl <- makeCluster(np,outfile="")
-    registerDoParallel(cl,cores=np)
-
-    if (!missing(genes)) {
-        proteins <- genes
-    }
-    else {
-        protein_lists <- lapply(expt$samples,function(d)
-            unique(sapply(d$replicates, function(l) {l$data$protein})) )
-        # proteins <- Reduce(union, protein_lists)
-        proteins <- unique(unlist(protein_lists))
-    }
-
-    pb <- txtProgressBar(min=0,max=length(proteins),style=3)
-        
-    results <-
-    foreach(i=1:length(proteins),.export=c(
-        "model_gene",
-        "abs_to_ratio",
-        "gen_profile",
-        "try_fit",
-        "sigmoid",
-        "sigmoid.d1",
-        "gen_description"
-    )) %dopar% {
-        gene <- proteins[i]
-        setTxtProgressBar(pb,i)
-        tryCatch( {
-            res <- model_gene(expt,gene,...)
-            return(res)
-        },error = function(e) {print(e)})
-    }
-    stopCluster(cl)
-    close(pb)
-    names(results) <- sapply(results, '[[', "name")
-    self <- structure(
-        results[!sapply(results,is.null)],
-        class = "MSThermResultSet"
-    )
-    return( self )
+    sapply(x, plot, ...)
+    return(invisible(NULL))
 
 }
 
-try_fit <- function(ratios,temps,trim,smooth) {
 
-    library(nls2, quietly=T)
+
+#' @title Summarize MSThermResult object.
+#'
+#' @description Print a summary of an MSThermResult, including samples and
+#' parameters.
+#'
+#' @param object an MSThermResult object
+#' @param ... additional arguments passed to or from other functions
+#'
+#' @return Nothing
+#'
+#' @examples
+#'\dontrun{
+#' m  <- model_protein(expt,"P38707")
+#' summmary(m)
+#'}
+#'
+#' @export
+
+summary.MSThermResult <- function(object, ...) {
+
+    cat(paste("Name:",object$name),"\n",sep='')
+    cat("Samples:\n");
+    for (i in object$sample_names) {
+        cat("    ",i,"\n",sep='')
+    }
+    cat("Parameters:\n");
+    for (i in names(object$parameters)) {
+        cat("    ",i,": ",object$parameters[[i]],"\n",sep='')
+    }
+
+    return(invisible(NULL))
+
+}
+
+
+
+#' @title Summarize MSThermResultSet object.
+#'
+#' @description Print a summary of an MSThermResultSet, including samples and
+#' parameters.
+#'
+#' @param object an MSThermResultSet object
+#' @param ... additional arguments passed to or from other functions
+#'
+#' @return Nothing
+#'
+#' @examples
+#'\dontrun{
+#' res  <- model_experiment(expt)
+#' summmary(res)
+#'}
+#'
+#' @export
+
+summary.MSThermResultSet <- function(object, ...) {
+
+    result <- object[[1]]
+    cat("Samples:\n");
+    for (i in result$sample_names) {
+        cat("    ",i,"\n",sep='')
+    }
+    cat("Parameters:\n");
+    for (i in names(result$parameters)) {
+        if (i != 'protein') {
+            cat("    ",i,": ",result$parameters[[i]],"\n",sep='')
+        }
+    }
+
+    return(invisible(NULL))
+
+}
+    
+
+
+#' @title Export MSThermResultSet to an SQLite database.
+#'
+#' @description Exports and MSThermResultSet object to a new SQLite database file.
+#' Each model (specific to a given replicate and protein) is exported as an
+#' individual record. The schema used for the 'data' table can be seen in the
+#' code below.
+#'
+#' @param res An MSThermResultSet object
+#' @param file Path to the output sqlite database to be created
+#'
+#' @return Nothing
+#'
+#' @examples
+#'\dontrun{
+#' write.sqlite(res, "/path/to/db.sqlite")
+#'}
+#'
+#' @export
+
+write.sqlite <- function( res, file ) {
+
+    if (requireNamespace("RSQLite")) {
+
+        con <- RSQLite::dbConnect(RSQLite::SQLite(), file)
+
+        create <- "CREATE TABLE data (
+            protein TEXT NOT NULL,
+            replicate TEXT NOT NULL,
+            sample TEXT NOT NULL,
+            m REAL NOT NULL,
+            k REAL NOT NULL,
+            p REAL NOT NULL,
+            x BLOB NOT NULL,
+            y BLOB NOT NULL,
+            psm INTEGER NOT NULL,
+            inf REAL NOT NULL,
+            slope REAL NOT NULL,
+            r2 REAL NOT NULL,
+            el BLOB,
+            eu BLOB,
+            ml REAL,
+            mu REAL,
+            PRIMARY KEY (protein, replicate)
+        );"
+
+        rs <- RSQLite::dbSendQuery(con, create)
+        RSQLite::dbClearResult(rs)
+
+        for (p in res) {
+
+            for (r in p$series) {
+
+                # skip un-modeled series
+                if (! r$is.fitted) {
+                    next
+                }
+
+                has_pci <- ! is.null(r$bs.lowers)
+                has_tci <- ! is.null(r$tm_CI)
+
+                # even though last two values are floats, treat as strings so that
+                # 'NULL' can be substituted when necessary
+                sql <- sprintf("INSERT INTO data VALUES ('%s', '%s', '%s', %f, %f,
+                    %f, '%s', '%s', %d, %f, %f, %f, %s, %s, %s, %s )",
+                    p$name,
+                    r$name,
+                    r$sample,
+                    r$tm,
+                    r$k,
+                    r$plat,
+                    x_to_str(r$x),
+                    y_to_str(r$y),
+                    r$psm,
+                    r$inf,
+                    r$slope,
+                    r$r2,
+                    if(has_pci) paste0("'",y_to_str( r$bs.lowers ),"'") else 'NULL',
+                    if(has_pci) paste0("'",y_to_str( r$bs.uppers ),"'") else 'NULL',
+                    if(has_tci) r$tm_CI[[1]] else 'NULL',
+                    if(has_tci) r$tm_CI[[2]] else 'NULL'
+                )
+
+                rs <- RSQLite::dbSendQuery(con, sql)
+                RSQLite::dbClearResult(rs)
+            }
+        }
+
+        RSQLite::dbDisconnect(con)
+
+        return(invisible(NULL))
+
+    }
+    else {
+        warning("RSQLite not installed so this functionality is unavailable", call.=F) 
+        return(FALSE)
+    }
+
+}
+
+
+
+# populate MSThermSample object with child replicates
+add_replicates <- function(sample, replicates) {
+
+    names(replicates) <- sapply(replicates, '[[', "name")
+    sample$replicates = c(sample$replicates, replicates)
+    return(sample)
+
+}
+
+
+
+# populate MSThermExperiment object with child samples
+add_samples <- function(expt, samples) {
+
+    names(samples) <- sapply(samples, '[[', "name")
+    expt$samples = c(expt$samples, samples)
+    return(expt)
+
+}
+
+
+
+# takes a value that could be either data frame or string. If string, assumes
+# a file path and tries to read into a data frame. Returns a data frame or
+# throws and exception.
+.to_dataframe <- function(str) {
+    if (is.character(str)) {
+        str <- read.delim(str,stringsAsFactors=F,header=T,comment.char="#")
+    }
+    if (! is.data.frame(str)) {
+        stop("input must be a valid filename or data.frame")
+    }
+    return(str)
+}
+   
+# currently unused
+#sigShift <- function( df, repl1, repl2, bin ) {
+#
+#   deltas <- df[[paste0(repl2,'.tm')]] - df[[paste0(repl1,'.tm')]]
+#   m <- median(deltas,na.rm=T)
+#   d <- mad(deltas,na.rm=T)
+#   print(m)
+#   print(d)
+#   z <- (deltas - m)/d
+#   p <- 2*pnorm(-abs(z))
+#   q <- p.adjust(p,method="BH")
+#   plot(density(deltas,na.rm=T),xlim=c(-10,10))
+#   x <- NULL; rm(x) # silence R CMD check noise due to curve() call below
+#   curve(dnorm(x,mean=m,sd=d),col="red",add=T)
+#   return(q)
+
+
+
+# generates an annotation/description string for an input protein or protein
+# group ID, splitting the input and combining the output with the given record
+# separator if necessary
+gen_description <- function(expt, protein, sep='|') {
+
+    parts <- strsplit(protein,sep,fixed=T)[[1]]
+    desc <- sapply(parts, function(x) ifelse( x %in% expt$annot$name,
+        expt$annot$annotation[expt$annot$name == x],
+        ''))
+    return(paste(desc,collapse=sep))
+
+}
+
+
+
+# Perform the actual model fitting
+try_fit <- function(ratios,temps,trim,smooth) {
 
     x <- temps
     y <- ratios
 
-    if (!missing(trim) & trim > 1) {
+    if (!missing(trim) & trim) {
         x <- temps[which.max(temps):length(temps)]
         y <- ratios[which.max(temps):length(temps)]
     }
@@ -945,10 +1298,10 @@ try_fit <- function(ratios,temps,trim,smooth) {
             fit <-
             nls2(y~sigmoid(p,k,m,x),data=list(x=x,y=y),start=mod,control=nls.control(warnOnly=F),algorithm="port",lower=c(0,1,10),upper=c(0.4,100000,100))
             obj <- list()
-            obj$plat <- coefficients(fit)[1]
-            obj$k <- coefficients(fit)[2]
-            obj$tm <- coefficients(fit)[3]
-            obj$slope <- sigmoid.d1(obj$plat,obj$k,obj$tm,obj$tm)
+            obj$plat  <- as.numeric(coefficients(fit)[1])
+            obj$k     <- as.numeric(coefficients(fit)[2])
+            obj$tm    <- as.numeric(coefficients(fit)[3])
+            obj$slope <- as.numeric(sigmoid.d1(obj$plat,obj$k,obj$tm,obj$tm))
             y.fit <- sigmoid(obj$plat,obj$k,obj$tm,temps)
             obj$y.fit <- y.fit
             obj$resid <- ratios - y.fit
@@ -962,22 +1315,28 @@ try_fit <- function(ratios,temps,trim,smooth) {
 }
 
 
+
+# The model
 sigmoid <- function(p,k,m,x) {
 
     (1-p)/(1+exp(-k*(1/x-1/m)))+p
 
 }
 
+
+
+# first derivative
 sigmoid.d1 <- function(p,k,m,x) {
 
     -((1 - p) * (exp(-k * (1/x - 1/m)) * (k * (1/x^2)))/(1 + exp(-k * (1/x - 1/m)))^2)
 
 }
 
+
+
+# performs the act
 norm_to_profile <- function(replicate,profile,model=T) {
 
-    library(RColorBrewer, quietly=T)
-    library(nls2, quietly=T)
     cols <- brewer.pal(3,"Set1")
 
     quant_columns <- match(replicate$meta$channel,colnames(replicate$data))
@@ -1021,10 +1380,11 @@ norm_to_profile <- function(replicate,profile,model=T) {
 }
 
 
-norm_to_std <- function(replicate,gene) {
 
-    library(RColorBrewer, quietly=T)
-    library(nls2, quietly=T)
+# Perfoms the actual normalization to a spike-in standard (see
+# "normalize_to_std" for the public method)
+norm_to_std <- function(replicate,protein) {
+
     cols <- brewer.pal(3,"Set1")
 
     quant_columns <- match(replicate$meta$channel,colnames(replicate$data))
@@ -1033,8 +1393,8 @@ norm_to_std <- function(replicate,gene) {
     quant <- replicate$data[,quant_columns]
 
     std <- matrix(nrow=0,ncol=ncol(quant)) 
-    for (g in gene) {
-        tmp <- quant[which(replicate$data$protein == g),]
+    for (p in protein) {
+        tmp <- quant[which(replicate$data$protein == p),]
         std <- rbind(std, tmp)
     }
     std.sums <- apply(std,2,sum)
@@ -1076,3 +1436,60 @@ norm_to_std <- function(replicate,gene) {
 
 }
 
+
+
+#----------------------------------------------------------------------------#
+# These functions are used for converting given data series in low resolution
+# to and from byte strings for storage in an SQL database
+#----------------------------------------------------------------------------#
+
+# stores abundance ratios as signed 8-bit values clamped between -4 and +4 and
+# returned as a string
+y_to_str <- function (v) {
+
+    y.conv <- vapply(v, function(y) {
+        min(255, round(y*64+127, 0))
+    }, double(1))
+    bs <- rawToChar(as.raw(y.conv))
+    return(bs)
+
+}
+
+# converts the output of "y_to_str" back to a numeric vector of abundance
+# ratios
+str_to_y <- function (s) {
+
+    y.conv <- as.integer(charToRaw(s))
+    y.orig <- (y.conv-127)/64
+    return(y.orig)
+
+}
+
+# stores temperatures as unsigned 8-bit values returned as a string 
+# input values must be between 20 and 83 (within expected Celcius temperature
+# range for TPP experiments). This could be modified to accept a wider range
+# of temperatures with a corresponding loss in precision of stored data or
+# else using more bytes per values
+x_to_str <- function (v) {
+
+    # check input range
+    if (min(v) < 20 | max(v) > 83) {
+        stop("temps must be between 20 and 83 oC")
+    }
+
+    x.conv <- vapply(v, function(x) {
+        round( (x-19)/64*255, 0 )
+    }, double(1))
+    bs <- rawToChar(as.raw(x.conv))
+    return(bs)
+
+}
+    
+# converts the output of "x_to_str" back to a numeric vector of temperatures
+str_to_x <- function (s) {
+
+    x.conv <- as.integer(charToRaw(s))
+    x.orig <- x.conv/255*64+19;
+    return(x.orig)
+
+}

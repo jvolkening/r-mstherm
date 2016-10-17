@@ -2,32 +2,35 @@
 % Please edit documentation in R/MSTherm.R
 \name{plot.MSThermResult}
 \alias{plot.MSThermResult}
-\title{Plot MSThermResult object}
+\title{Plot MSThermResult object.}
 \usage{
-\method{plot}{MSThermResult}(result, table = T, col, CI.points = T,
-  CI.Tm = T, ...)
+\method{plot}{MSThermResult}(x, table = T, col, CI.points = T, CI.Tm = T,
+  ...)
 }
 \arguments{
-\item{result}{An MSThermResult object}
+\item{x}{An MSThermResult object}
 
-\item{table}{(T/F) Include table of per-replicate parameters}
+\item{table}{(T/f) include table of per-replicate parameters}
 
-\item{col}{Array of colors used to plot samples}
+\item{col}{array of colors used to plot samples}
 
-\item{CI.points}{(T/F) Plot temperature point confidence intervals}
+\item{CI.points}{(T/F) plot temperature point confidence intervals}
 
-\item{CI.Tm}{(T/F) Plot Tm confidence intervals
-intervals}
+\item{CI.Tm}{(T/F) plot Tm confidence intervals}
+
+\item{...}{other parameters passed through to plot()}
 }
 \value{
 Nothing
 }
 \description{
-Generate a denaturation plot for an modeled protein/group
+Generate a denaturation plot for an modeled protein/group.
 }
 \examples{
-m  <- model_gene(expt,"P12345")
+\dontrun{
+m  <- model_protein(expt,"P38707")
 plot(m)
+}
 
 }
 
