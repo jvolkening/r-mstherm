@@ -21,4 +21,12 @@ Imports:
 Suggests:
     RSQLite,
     testthat
+Collate:
+   mstherm.R
+   classes.R
+   normalization.R
+   modeling.R
+   plot.R
+   analysis.R
+   export.R
 RoxygenNote: 5.0.1
