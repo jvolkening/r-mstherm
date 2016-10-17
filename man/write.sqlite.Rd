@@ -2,7 +2,7 @@
 % Please edit documentation in R/MSTherm.R
 \name{write.sqlite}
 \alias{write.sqlite}
-\title{Export MSThermResultSet to an SQLite database}
+\title{Export MSThermResultSet to an SQLite database.}
 \usage{
 write.sqlite(res, file)
 }

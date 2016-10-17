@@ -2,7 +2,7 @@
 % Please edit documentation in R/MSTherm.R
 \name{plot.MSThermResult}
 \alias{plot.MSThermResult}
-\title{Plot MSThermResult object}
+\title{Plot MSThermResult object.}
 \usage{
 \method{plot}{MSThermResult}(x, table = T, col, CI.points = T, CI.Tm = T,
   ...)
@@ -24,7 +24,7 @@
 Nothing
 }
 \description{
-Generate a denaturation plot for an modeled protein/group
+Generate a denaturation plot for an modeled protein/group.
 }
 \examples{
 \dontrun{

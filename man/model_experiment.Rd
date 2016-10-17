@@ -2,7 +2,7 @@
 % Please edit documentation in R/MSTherm.R
 \name{model_experiment}
 \alias{model_experiment}
-\title{Model MSThermExperiment}
+\title{Model MSThermExperiment.}
 \usage{
 model_experiment(expt, proteins, np, ...)
 }
@@ -21,7 +21,7 @@ processors)}
 MSThermResultSet object
 }
 \description{
-Model multiple proteins from an MSThermExperiment object
+Model multiple proteins from an MSThermExperiment object.
 }
 \examples{
 \dontrun{

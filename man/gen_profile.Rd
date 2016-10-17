@@ -2,7 +2,7 @@
 % Please edit documentation in R/MSTherm.R
 \name{gen_profile}
 \alias{gen_profile}
-\title{Generate protein ratio profile from spectrum quantification matrix}
+\title{Generate protein ratio profile from spectrum quantification matrix.}
 \usage{
 gen_profile(x, method = "sum", method.denom = "first")
 }
@@ -21,6 +21,20 @@ A numeric vector of the same length as the number of matrix columns
 \description{
 \code{gen_profile} takes a matrix of spectrum channel
 quantification values belonging to a protein and "rolls them up" into a
-vector of protein-level relative quantification values
+vector of protein-level relative quantification values.
 }
+\details{
+The following methods for spectrum-to-protein conversion are
+supported:
+    \describe{
+       \item{"sum"}{use the sum of the Spectrum values for each channel}
+       \item{"median"}{use the median of the spectrum values for each
+         channel}
+       \item{"ratio.median"}{Like "median", but values for each spectrum
+         are first converted to ratios according to "method.denom"
+         channel}
+       \item{"ratio.mean"}{Like "ratio.median" but using mean of ratios}
+    }
+}
+\keyword{internal}
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/MSTherm.R
 \name{model_protein}
 \alias{model_protein}
-\title{Model single protein}
+\title{Model single protein.}
 \usage{
 model_protein(expt, protein, min_rep_psm = 0, min_smp_psm = 0,
   min_tot_psm = 0, max_inf = 1, min_score, max_score, smooth = 0,
@@ -57,31 +57,32 @@ retrieval of annotations) (default: '|')}
 MSThermResult object
 }
 \description{
-Model a single protein from an MSThermExperiment object
+Model a single protein from an MSThermExperiment object.
 }
 \details{
 Valid quantification methods include:
-  \describe{
-     \item{"sum"}{Absolute sums for all spectra in each channel are used
-        to calculate ratios}
-     \item{"median"}{Median absolute intensities for spectra in each channel are used
-        to calculate ratios}
-     \item{"ratio.median"}{Ratios are calculated for each spectrum and
-        the median ratio for each channel is used}
-     \item{"ratio.mean"}{Ratios are calculated for each spectrum and
-        the mean ratio for each channel is used}
-  }
+    \describe{
+       \item{"sum"}{use the sum of the spectrum values for each channel}
+       \item{"median"}{use the median of the spectrum values for each
+         channel}
+       \item{"ratio.median"}{Like "median", but values for each spectrum
+         are first converted to ratios according to "method.denom"
+         channel}
+       \item{"ratio.mean"}{Like "ratio.median" but using mean of ratios}
+    }
 Valid denominator methods include:
-  \describe{
-     \item{"first"}{Use the value of the lowest temperature}
-     \item{"max"}{Use the largest value}
-     \item{"top3"}{Use the mean of the three largest values}
-     \item{"near"}{Add description}
-  }
+    \describe{
+       \item{"first"}{Use the first value (lowest temperature point)
+         (default)}
+       \item{"max"}{Use the maximum value}
+       \item{"top3"}{Use the mean of the three highest values}
+       \item{"near"}{Use the median of all values greater than 80% of
+         the first value}
+    }
 }
 \examples{
 \dontrun{
-p01  <- model_protein(expt,protein="protein01",smooth=T,bootstrap=F)
+p01  <- model_protein(expt, protein="protein01", smooth=T, bootstrap=F)
 }
 
 }

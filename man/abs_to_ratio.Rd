@@ -2,7 +2,7 @@
 % Please edit documentation in R/MSTherm.R
 \name{abs_to_ratio}
 \alias{abs_to_ratio}
-\title{Convert absolute quantitation to relative ratios}
+\title{Convert absolute quantitation to relative ratios.}
 \usage{
 abs_to_ratio(x, method = "first")
 }
@@ -33,4 +33,5 @@ The denominator used to calculate relative protein concentrations
          the first value}
     }
 }
+\keyword{internal}
 

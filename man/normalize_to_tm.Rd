@@ -2,7 +2,7 @@
 % Please edit documentation in R/MSTherm.R
 \name{normalize_to_tm}
 \alias{normalize_to_tm}
-\title{Re-normalize based on Tm}
+\title{Re-normalize based on Tm.}
 \usage{
 normalize_to_tm(expt, res)
 }
@@ -15,8 +15,19 @@ normalize_to_tm(expt, res)
 An MsThermExperiment object with re-normalized data slots
 }
 \description{
-Normalizes each replicate of an experiment based on linear regression
-of calculated Tm (corrects for remaining systematic error)
+Normalizes each replicate of an experiment based on linear
+regression of calculated Tm (corrects for remaining systematic error).
+}
+\details{
+An assumption can be made in most TPP experiments using a single
+organism that the Tm of most proteins should not be changing. However,
+global shifts have been observed between replicates, presumably due to
+technical variance, which complicate data interpretation. This method
+attempts to remove this source of error by doing a bootstrap
+renormalization of the quantification values based on pairwise linear
+regression between calculated Tms of each replicate. A reference set of Tms
+is calculated based on all replicates, and each replicate is normalized to
+this based on the calculated slope and intercept of the input data.
 }
 \examples{
 \dontrun{

@@ -2,7 +2,7 @@
 % Please edit documentation in R/MSTherm.R
 \name{summary.MSThermResultSet}
 \alias{summary.MSThermResultSet}
-\title{Summarize MSThermResultSet object}
+\title{Summarize MSThermResultSet object.}
 \usage{
 \method{summary}{MSThermResultSet}(object, ...)
 }
@@ -15,7 +15,8 @@
 Nothing
 }
 \description{
-Print a summary of an MSThermResultSet, including samples and parameters
+Print a summary of an MSThermResultSet, including samples and
+parameters.
 }
 \examples{
 \dontrun{

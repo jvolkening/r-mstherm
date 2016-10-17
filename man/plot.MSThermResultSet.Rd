@@ -2,7 +2,7 @@
 % Please edit documentation in R/MSTherm.R
 \name{plot.MSThermResultSet}
 \alias{plot.MSThermResultSet}
-\title{Plot MSThermResultSet object}
+\title{Plot MSThermResultSet object.}
 \usage{
 \method{plot}{MSThermResultSet}(x, ...)
 }
@@ -15,7 +15,8 @@
 Nothing
 }
 \description{
-Generate a series of denaturation plots for all results in an MSThermResultSet
+Generate a series of denaturation plots for all results in an
+MSThermResultSet.
 }
 \details{
 Since this function makes multiple sequential calls to
