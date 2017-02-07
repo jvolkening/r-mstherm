@@ -89,6 +89,13 @@ write.sqlite <- function( res, file ) {
         rs <- RSQLite::dbSendQuery(con, create)
         RSQLite::dbClearResult(rs)
 
+        create <- "CREATE TABLE temps (
+            id INTEGER PRIMARY KEY NOT NULL,
+            value BLOB NOT NULL
+        );"
+        rs <- RSQLite::dbSendQuery(con, create)
+        RSQLite::dbClearResult(rs)
+
         create <- "CREATE TABLE data (
             protein INTEGER NOT NULL,
             replicate INTEGER NOT NULL,
@@ -96,12 +103,12 @@ write.sqlite <- function( res, file ) {
             m REAL NOT NULL,
             k REAL NOT NULL,
             p REAL NOT NULL,
-            x BLOB NOT NULL,
+            x INTEGER NOT NULL,
             y BLOB NOT NULL,
             psm INTEGER NOT NULL,
-            inf REAL NOT NULL,
+            inf INTEGER NOT NULL,
             slope REAL NOT NULL,
-            r2 REAL NOT NULL,
+            r2 INTEGER NOT NULL,
             el BLOB,
             eu BLOB,
             ml REAL,
@@ -114,10 +121,12 @@ write.sqlite <- function( res, file ) {
         i.p <- 0
         i.s <- 0
         i.r <- 0
+        i.x <- 0
 
         used.p <- c()
         used.s <- c()
         used.r <- c()
+        used.x <- c()
 
         for (p in res) {
 
@@ -127,17 +136,11 @@ write.sqlite <- function( res, file ) {
                 i.p <- i.p + 1
                 used.p <- append(used.p, p$name)
 
-                sql <- sprintf("INSERT INTO proteins VALUES ('%d', '%s', '%s')",
-                    p.id,
-                    p$name,
-                    ""
-                    #p$annotation
-                )
+                df <- data.frame(id=p.id,name=p$name,annot=p$annotation)
+                sql <- "INSERT INTO proteins VALUES (:id, :name, :annot)"
+                rs <-RSQLite::dbGetQuery(con, sql, df)
+
             }
-
-            rs <- RSQLite::dbSendQuery(con, sql)
-            RSQLite::dbClearResult(rs)
-
 
             for (r in p$series) {
 
@@ -146,20 +149,30 @@ write.sqlite <- function( res, file ) {
                     next
                 }
 
+                x_blob <- x_to_str(r$x)
+                x_tag  <- rawToChar(x_blob)
+                x.id <- match(x_tag, used.x, nomatch=0)
+                if (! x.id) {
+                    x.id = i.x
+                    i.x <- i.x + 1
+                    used.x <- append(used.x, x_tag)
+
+                    df <- data.frame(id=x.id,value=I(list(x_blob)))
+                    sql <- "INSERT INTO temps VALUES (:id, :value)"
+                    rs <-RSQLite::dbGetQuery(con, sql, df)
+
+                }
+
                 r.id <- match(r$name, used.r, nomatch=0)
                 if (! r.id) {
                     r.id = i.r
-                    print(r$name)
-                    print(used.r)
                     i.r <- i.r + 1
                     used.r <- append(used.r, r$name)
+                    
+                    df <- data.frame(id=r.id,name=r$name)
+                    sql <- "INSERT INTO replicates VALUES (:id, :name)"
+                    rs <-RSQLite::dbGetQuery(con, sql, df)
 
-                    sql <- sprintf("INSERT INTO replicates VALUES ('%d', '%s')",
-                        r.id,
-                        r$name
-                    )
-                    rs <- RSQLite::dbSendQuery(con, sql)
-                    RSQLite::dbClearResult(rs)
                 }
 
                 s.id <- match(r$sample, used.s, nomatch=0)
@@ -168,41 +181,42 @@ write.sqlite <- function( res, file ) {
                     i.s <- i.s + 1
                     used.s <- append(used.s, r$sample)
 
-                    sql <- sprintf("INSERT INTO samples VALUES ('%d', '%s')",
-                        s.id,
-                        r$sample
-                    )
-                    rs <- RSQLite::dbSendQuery(con, sql)
-                    RSQLite::dbClearResult(rs)
+                    df <- data.frame(id=s.id,name=r$sample)
+                    sql <- "INSERT INTO samples VALUES (:id, :name)"
+                    rs <-RSQLite::dbGetQuery(con, sql, df)
                 }
 
                 has_pci <- ! is.null(r$bs.lowers)
                 has_tci <- ! is.null(r$tm_CI)
 
+                y_blob <- y_to_str(r$y)
+
                 # even though last two values are floats, treat as strings so that
                 # 'NULL' can be substituted when necessary
-                sql <- sprintf("INSERT INTO data VALUES ('%d', '%d', '%d', %f, %f,
-                    %f, '%s', '%s', %d, %f, %f, %f, %s, %s, %s, %s )",
-                    p.id,
-                    r.id,
-                    s.id,
-                    r$tm,
-                    r$k,
-                    r$plat,
-                    x_to_str(r$x),
-                    y_to_str(r$y),
-                    r$psm,
-                    r$inf,
-                    r$slope,
-                    r$r2,
-                    if(has_pci) paste0("'",y_to_str( r$bs.lowers ),"'") else 'NULL',
-                    if(has_pci) paste0("'",y_to_str( r$bs.uppers ),"'") else 'NULL',
-                    if(has_tci) r$tm_CI[[1]] else 'NULL',
-                    if(has_tci) r$tm_CI[[2]] else 'NULL'
+                df <- data.frame(
+                    pid = p.id,
+                    rid = r.id,
+                    sid = s.id,
+                    tm  = r$tm,
+                    k   = r$k,
+                    p   = r$plat,
+                    xid = x.id,
+                    y   = I(list(y_blob)),
+                    psm = r$psm,
+                    inf = as.integer( r$inf * 255 ),
+                    slp = r$slope,
+                    r2  = as.integer( r$r2 * 255 ),
+                    v1  = if(has_pci) I(list(y_to_str( r$bs.lowers ))) else 'NULL',
+                    v2  = if(has_pci) I(list(y_to_str( r$bs.uppers ))) else 'NULL',
+                    v3  = if(has_tci) r$tm_CI[[1]] else 'NULL',
+                    v4  = if(has_tci) r$tm_CI[[2]] else 'NULL'
+                    #NULL,
+                    #NULL,
+                    #NULL,
+                    #NULL,
                 )
-
-                rs <- RSQLite::dbSendQuery(con, sql)
-                RSQLite::dbClearResult(rs)
+                sql <- "INSERT INTO data VALUES (:pid, :rid, :sid, :tm, :k, :p, :xid, :y, :psm, :inf, :slp, :r2, :v1, :v2, :v3, :v4)"
+                rs <-RSQLite::dbGetQuery(con, sql, df)
 
             }
         }
@@ -233,7 +247,7 @@ y_to_str <- function (v) {
     y.conv <- vapply(v, function(y) {
         min(255, round(y*64+127, 0))
     }, double(1))
-    bs <- rawToChar(as.raw(y.conv))
+    bs <- as.raw(y.conv)
     return(bs)
 
 }
@@ -242,7 +256,7 @@ y_to_str <- function (v) {
 # ratios
 str_to_y <- function (s) {
 
-    y.conv <- as.integer(charToRaw(s))
+    y.conv <- as.integer(s)
     y.orig <- (y.conv-127)/64
     return(y.orig)
 
@@ -263,7 +277,7 @@ x_to_str <- function (v) {
     x.conv <- vapply(v, function(x) {
         round( (x-19)/64*255, 0 )
     }, double(1))
-    bs <- rawToChar(as.raw(x.conv))
+    bs <- as.raw(x.conv)
     return(bs)
 
 }
@@ -271,7 +285,7 @@ x_to_str <- function (v) {
 # converts the output of "x_to_str" back to a numeric vector of temperatures
 str_to_x <- function (s) {
 
-    x.conv <- as.integer(charToRaw(s))
+    x.conv <- as.integer(s)
     x.orig <- x.conv/255*64+19;
     return(x.orig)
 
