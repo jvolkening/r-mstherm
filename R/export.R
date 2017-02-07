@@ -67,10 +67,32 @@ write.sqlite <- function( res, file ) {
 
         con <- RSQLite::dbConnect(RSQLite::SQLite(), file)
 
+        create <- "CREATE TABLE proteins (
+            id INTEGER PRIMARY KEY NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT
+        );"
+        rs <- RSQLite::dbSendQuery(con, create)
+        RSQLite::dbClearResult(rs)
+
+        create <- "CREATE TABLE samples (
+            id INTEGER PRIMARY KEY NOT NULL,
+            name TEXT NOT NULL
+        );"
+        rs <- RSQLite::dbSendQuery(con, create)
+        RSQLite::dbClearResult(rs)
+
+        create <- "CREATE TABLE replicates (
+            id INTEGER PRIMARY KEY NOT NULL,
+            name TEXT NOT NULL
+        );"
+        rs <- RSQLite::dbSendQuery(con, create)
+        RSQLite::dbClearResult(rs)
+
         create <- "CREATE TABLE data (
-            protein TEXT NOT NULL,
-            replicate TEXT NOT NULL,
-            sample TEXT NOT NULL,
+            protein INTEGER NOT NULL,
+            replicate INTEGER NOT NULL,
+            sample INTEGER NOT NULL,
             m REAL NOT NULL,
             k REAL NOT NULL,
             p REAL NOT NULL,
@@ -86,11 +108,36 @@ write.sqlite <- function( res, file ) {
             mu REAL,
             PRIMARY KEY (protein, replicate)
         );"
-
         rs <- RSQLite::dbSendQuery(con, create)
         RSQLite::dbClearResult(rs)
 
+        i.p <- 0
+        i.s <- 0
+        i.r <- 0
+
+        used.p <- c()
+        used.s <- c()
+        used.r <- c()
+
         for (p in res) {
+
+            p.id <- match(p$name, used.p, nomatch=0)
+            if (! p.id) {
+                p.id = i.p
+                i.p <- i.p + 1
+                used.p <- append(used.p, p$name)
+
+                sql <- sprintf("INSERT INTO proteins VALUES ('%d', '%s', '%s')",
+                    p.id,
+                    p$name,
+                    ""
+                    #p$annotation
+                )
+            }
+
+            rs <- RSQLite::dbSendQuery(con, sql)
+            RSQLite::dbClearResult(rs)
+
 
             for (r in p$series) {
 
@@ -99,16 +146,46 @@ write.sqlite <- function( res, file ) {
                     next
                 }
 
+                r.id <- match(r$name, used.r, nomatch=0)
+                if (! r.id) {
+                    r.id = i.r
+                    print(r$name)
+                    print(used.r)
+                    i.r <- i.r + 1
+                    used.r <- append(used.r, r$name)
+
+                    sql <- sprintf("INSERT INTO replicates VALUES ('%d', '%s')",
+                        r.id,
+                        r$name
+                    )
+                    rs <- RSQLite::dbSendQuery(con, sql)
+                    RSQLite::dbClearResult(rs)
+                }
+
+                s.id <- match(r$sample, used.s, nomatch=0)
+                if (! s.id) {
+                    s.id = i.s
+                    i.s <- i.s + 1
+                    used.s <- append(used.s, r$sample)
+
+                    sql <- sprintf("INSERT INTO samples VALUES ('%d', '%s')",
+                        s.id,
+                        r$sample
+                    )
+                    rs <- RSQLite::dbSendQuery(con, sql)
+                    RSQLite::dbClearResult(rs)
+                }
+
                 has_pci <- ! is.null(r$bs.lowers)
                 has_tci <- ! is.null(r$tm_CI)
 
                 # even though last two values are floats, treat as strings so that
                 # 'NULL' can be substituted when necessary
-                sql <- sprintf("INSERT INTO data VALUES ('%s', '%s', '%s', %f, %f,
+                sql <- sprintf("INSERT INTO data VALUES ('%d', '%d', '%d', %f, %f,
                     %f, '%s', '%s', %d, %f, %f, %f, %s, %s, %s, %s )",
-                    p$name,
-                    r$name,
-                    r$sample,
+                    p.id,
+                    r.id,
+                    s.id,
                     r$tm,
                     r$k,
                     r$plat,
@@ -126,6 +203,7 @@ write.sqlite <- function( res, file ) {
 
                 rs <- RSQLite::dbSendQuery(con, sql)
                 RSQLite::dbClearResult(rs)
+
             }
         }
 
