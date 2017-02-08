@@ -188,6 +188,7 @@ write.sqlite <- function( res, file ) {
 
                 has_pci <- ! is.null(r$bs.lowers)
                 has_tci <- ! is.null(r$tm_CI)
+                has_inf <- ! is.null(r$inf)
 
                 y_blob <- y_to_str(r$y)
 
@@ -203,7 +204,7 @@ write.sqlite <- function( res, file ) {
                     xid = x.id,
                     y   = I(list(y_blob)),
                     psm = r$psm,
-                    inf = as.integer( r$inf * 255 ),
+                    inf = if(has_inf) as.integer( r$inf * 255 ) else 'NULL',
                     slp = r$slope,
                     r2  = as.integer( r$r2 * 255 ),
                     v1  = if(has_pci) I(list(y_to_str( r$bs.lowers ))) else 'NULL',
