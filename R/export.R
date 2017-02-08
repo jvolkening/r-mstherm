@@ -130,8 +130,8 @@ write.sqlite <- function( res, file ) {
 
         for (p in res) {
 
-            p.id <- match(p$name, used.p, nomatch=0)
-            if (! p.id) {
+            p.id <- match(p$name, used.p, nomatch=0) - 1
+            if (p.id < 0) {
                 p.id = i.p
                 i.p <- i.p + 1
                 used.p <- append(used.p, p$name)
@@ -151,8 +151,8 @@ write.sqlite <- function( res, file ) {
 
                 x_blob <- x_to_str(r$x)
                 x_tag  <- rawToChar(x_blob)
-                x.id <- match(x_tag, used.x, nomatch=0)
-                if (! x.id) {
+                x.id <- match(x_tag, used.x, nomatch=0) - 1
+                if (x.id < 0) {
                     x.id = i.x
                     i.x <- i.x + 1
                     used.x <- append(used.x, x_tag)
@@ -163,8 +163,8 @@ write.sqlite <- function( res, file ) {
 
                 }
 
-                r.id <- match(r$name, used.r, nomatch=0)
-                if (! r.id) {
+                r.id <- match(r$name, used.r, nomatch=0) - 1
+                if (r.id < 0) {
                     r.id = i.r
                     i.r <- i.r + 1
                     used.r <- append(used.r, r$name)
@@ -175,8 +175,8 @@ write.sqlite <- function( res, file ) {
 
                 }
 
-                s.id <- match(r$sample, used.s, nomatch=0)
-                if (! s.id) {
+                s.id <- match(r$sample, used.s, nomatch=0) - 1
+                if (s.id < 0) {
                     s.id = i.s
                     i.s <- i.s + 1
                     used.s <- append(used.s, r$sample)
@@ -210,10 +210,6 @@ write.sqlite <- function( res, file ) {
                     v2  = if(has_pci) I(list(y_to_str( r$bs.uppers ))) else 'NULL',
                     v3  = if(has_tci) r$tm_CI[[1]] else 'NULL',
                     v4  = if(has_tci) r$tm_CI[[2]] else 'NULL'
-                    #NULL,
-                    #NULL,
-                    #NULL,
-                    #NULL,
                 )
                 sql <- "INSERT INTO data VALUES (:pid, :rid, :sid, :tm, :k, :p, :xid, :y, :psm, :inf, :slp, :r2, :v1, :v2, :v3, :v4)"
                 rs <-RSQLite::dbGetQuery(con, sql, df)
