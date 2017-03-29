@@ -29,10 +29,12 @@ as.data.frame.MSThermResultSet <- function( x, ... ) {
     repl_names <- repl_names[order(repl_names)]
 
     for (r in repl_names) {
-        x <- x[1]$series[[r]][['x']]
+        #x <- x[1]$series[[r]][['x']]
 
         for(col in c("tm","psm","inf","slope","k","plat","r2","rmsd")) {
-            df[[paste0(r,'.',col)]]  <- sapply(x, function(v) v$series[[r]][[col]])
+            s <- sapply(x, function(v) v$series[[r]][[col]])
+            s[sapply(s, is.null)] <- NA
+            df[[paste0(r,'.',col)]]  <- unlist(s, use.names=F)
         }
     }
 

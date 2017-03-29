@@ -1,3 +1,7 @@
+Changes in mstherm 0.4.6
+
+ o Fixed conversion of MSThermResultSet to data frame
+
 Changes in mstherm 0.4.5
 
  o Added export to SQLite database
