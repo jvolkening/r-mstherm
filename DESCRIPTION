@@ -20,7 +20,9 @@ Imports:
     plotrix
 Suggests:
     RSQLite,
-    testthat
+    testthat,
+    knitr,
+    rmarkdown
 Collate:
    mstherm.R
    classes.R
@@ -30,3 +32,4 @@ Collate:
    analysis.R
    export.R
 RoxygenNote: 5.0.1
+VignetteBuilder: knitr

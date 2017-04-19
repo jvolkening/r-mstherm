@@ -10,6 +10,10 @@
 #'   sample to model protein
 #' @param min_tot_psm Minimum number of spectral matches required across all
 #'   replicates to model protein
+#' @param min_r2 Minimum R2 value to consider model (implies "only_modeled")
+#' @param max_slope Maximum slope to consider model (implies "only_modeled")
+#' @param min_reps Minimum number of modeled replicates for each sample to
+#'   return protein
 #' @param max_inf Maximum co-isolation interference level allowed to include a
 #'   spectrum in protein-level quantification
 #' @param min_score minimum score allowed to include a
@@ -73,7 +77,13 @@ model_protein <- function( expt, protein,
   bootstrap    = 0,
   min_bs_psms  = 8,
   merge_reps   = 0,
-  annot_sep    = '|'
+  annot_sep    = '|',
+  max_slope    = 0,
+  min_r2       = 0,
+  min_reps     = 0,
+  only_modeled = 0,
+  check_missing = 0,
+  missing_cutoff = 0.3
 ) {
 
     self <- structure(
@@ -91,10 +101,16 @@ model_protein <- function( expt, protein,
 
     psm_tot   <- 0 # track total PSMs for protein
     n_samples <- length(expt$samples)
+
+    if (min_r2 > 0 || max_slope < 0 ) {
+        only_modeled = 1
+    }
         
     for (i_sample in 1:n_samples) {
 
         psm_smp <- 0 # track total PSMs for sample
+        worst_slope <- -1
+        worst_r2    <- 1
 
         sample <- expt$samples[[i_sample]]
         n_replicates <- length(sample$replicates)
@@ -105,10 +121,11 @@ model_protein <- function( expt, protein,
         merged_temps   <- c()
         merged_splits  <- c(0)
         merged_psms    <- 0
+        n_reps         <- 0
 
         # Process each replicate
         for (i_replicate in 1:n_replicates) {
-            
+           
             replicate <- sample$replicates[[i_replicate]]
            
             # Set score range if not yet defined
@@ -139,12 +156,20 @@ model_protein <- function( expt, protein,
                 sub <- sub[which( sub$score >= min_score & sub$score <= max_score ),]
             }
 
+            if (nrow(sub) < 1) {
+                next
+            }
+
             # Reorder channels based on metadata
             quant_columns <- match(replicate$meta$channel,colnames(sub))
             quant <- sub[,quant_columns]
 
             # Filter out rows with NA or with all zero values
-            ok    <- apply(quant,1,function(v) {all(!is.na(v)) & any(v>0)})
+            ok <- apply(quant,1,function(v) {
+                all(!is.na(v)) &
+                  any(v>0)     &
+                  ( (! check_missing) || is_consistent(v, missing_cutoff) )
+            })
             sub   <- sub[ok,]
             quant <- quant[ok,]
 
@@ -210,11 +235,21 @@ model_protein <- function( expt, protein,
                         fit$tm_CI <- quantile(bs,c(0.025,0.975),na.rm=T)
                     }
                 }
+                if (fit$r2 < min_r2) {
+                    next;
+                }
+                if (fit$slope > max_slope) {
+                    next;
+                }
+                n_reps = n_reps + 1
 
             }
 
             # If unfitted, these variables still need to be set but should be NA
             else {
+                if (only_modeled) {
+                    next;
+                }
                 fit$tm    <- NA
                 fit$slope <- NA
                 fit$k     <- NA
@@ -227,6 +262,10 @@ model_protein <- function( expt, protein,
 
         # Filter on total PSMs for sample
         if (psm_smp < min_smp_psm) {
+            return( NULL )
+        }
+        # Filter on minimum modeled replicates for sample
+        if (n_reps < min_reps) {
             return( NULL )
         }
         
@@ -297,6 +336,14 @@ model_protein <- function( expt, protein,
     if (psm_tot < min_tot_psm) {
         return( NULL )
     }
+    # Filter on worst slope
+    if (worst_slope > max_slope) {
+        return( NULL )
+    }
+    # Filter on worst R2
+    if (worst_r2 < min_r2) {
+        return( NULL )
+    }
 
     # If asked to merge reps, replace individual replicates with merged
     # profiles
@@ -354,10 +401,13 @@ model_experiment <- function(expt,proteins,np,...) {
         "try_fit",
         "sigmoid",
         "sigmoid.d1",
-        "gen_description"
+        "gen_description",
+        "pb"
     )) %dopar% {
         protein <- proteins[i]
-        setTxtProgressBar(pb,i)
+        if (getTxtProgressBar(pb) < i) {
+            setTxtProgressBar(pb,i)
+        }
         tryCatch( {
             res <- model_protein(expt,protein,...)
             return(res)
@@ -524,5 +574,29 @@ sigmoid <- function(p,k,m,x) {
 sigmoid.d1 <- function(p,k,m,x) {
 
     -((1 - p) * (exp(-k * (1/x - 1/m)) * (k * (1/x^2)))/(1 + exp(-k * (1/x - 1/m)))^2)
+
+}
+
+# look for probable missing values
+is_consistent <- function(v,cutoff=0.3) {
+
+    len <- length(v)
+
+    if (len < 2) {
+        return(1)
+    }
+
+    for (i in 1:(len-1)) {
+        if (i == 1 & (v[i]/v[i+1]) < cutoff) {
+            return(0)
+        }
+        if (i > 1) {
+            if ((v[i]/v[i-1]) < cutoff & (v[i]/v[i+1]) < cutoff) {
+                return(0)
+            }
+        }
+    }
+
+    return(1)
 
 }

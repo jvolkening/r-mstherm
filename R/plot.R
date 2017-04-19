@@ -126,12 +126,13 @@ plot.MSThermResult <- function(
             just.y <- 1
         }
 
-        l <- length(result$series)*3
-        tbl <- matrix(rep(0,length(result$series)*3),ncol=3)
+        #l <- length(result$series)*4
+        tbl <- matrix(rep(0,length(result$series)*4),ncol=4)
         tbl[,1] <- sapply(result$series, function(x) ifelse(is.null(x$psm),NA,x$psm))
         tbl[,2] <- round(sapply(result$series, function(x) ifelse(is.null(x$tm),NA,x$tm)),1)
         tbl[,3] <- round(sapply(result$series, function(x) ifelse(is.null(x$slope),NA,x$slope)),2)
-        colnames(tbl) <- c("PSM",expression(T[m]),"Slp")
+        tbl[,4] <- round(sapply(result$series, function(x) ifelse(is.null(x$r2),NA,x$r2)),2)
+        colnames(tbl) <- c("PSM",expression(T[m]),"Slp","R2")
         rownames(tbl) <- sapply(result$series, '[[', "name")
         addtable2plot(t.x,t.y,table=tbl,bty="o",lwd=1,hlines=T,xjust=just.x,yjust=just.y,display.rownames=T,xpad=0.4,ypad=1.0,cex=0.7,bg="#FFFFFF77")
     }
