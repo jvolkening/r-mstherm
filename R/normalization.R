@@ -42,11 +42,11 @@ normalize_to_tm <- function( expt, res ) {
     for (r in repl_names) {
         #x <- x[1]$series[[r]][['x']]
 
-        s <- sapply(x, function(v) v$series[[r]][["tm"]])
+        s <- sapply(res, function(v) v$series[[r]][["tm"]])
         s[sapply(s, is.null)] <- NA
         df.tm[[paste0(r,'.',"tm")]]  <- unlist(s, use.names=F)
 
-        s <- sapply(x, function(v) v$series[[r]][["r2"]])
+        s <- sapply(res, function(v) v$series[[r]][["r2"]])
         s[sapply(s, is.null)] <- NA
         df.r2[[paste0(r,'.',"r2")]]  <- unlist(s, use.names=F)
     }
