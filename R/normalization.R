@@ -66,8 +66,8 @@ normalize_to_tm <- function( expt, res ) {
             next
         }
         tm.u <- as.vector(sapply(res, function(v) v$series[[r]][['tm']]))
-        #l <- lm(tm.b ~ tm.u)
-        l <- median(tm.b - tm.u)
+        l <- lm(tm.b ~ tm.u)
+        #l <- median(tm.b - tm.u)
 
         for (s in sample_names) {
             print(s)
@@ -76,9 +76,8 @@ normalize_to_tm <- function( expt, res ) {
             for (r2 in r_names) {
                 print(r2)
                 if (r2 == r) {
-                    print(l)
                     #expt$samples[[s]]$replicates[[r]]$meta$temp <- expt$samples[[s]]$replicates[[r]]$meta$temp * l$coefficients[2] + l$coefficients[1]
-                    expt$samples[[s]]$replicates[[r]]$meta$temp <- expt$samples[[s]]$replicates[[r]]$meta$temp + l
+                    expt$samples[[s]]$replicates[[r]]$meta$temp <- expt$samples[[s]]$replicates[[r]]$meta$temp * l$coefficients[2] + l$coefficients[1]
                 }
             }
         }
