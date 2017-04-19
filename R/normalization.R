@@ -27,34 +27,44 @@
 
 normalize_to_tm <- function( expt, res ) {
 
-    repl_names <- sapply(res[[1]]$series, '[[', "name")
+    df.tm <- data.frame(
+        row.names = sapply(res, '[[', "name")
+    )
+    df.r2 <- data.frame(
+        row.names = sapply(res, '[[', "name")
+    )
 
-    # filter low-quality fits
-    c <- 1
-    m.r2 <- matrix(ncol=length(repl_names),nrow=length(res))
+    repl_lists <- lapply(res, function(d)
+        unique(sapply( d$series, '[[', "name" )))
+    repl_names <- unique(unlist(repl_lists))
+    repl_names <- repl_names[order(repl_names)]
+
     for (r in repl_names) {
-        m.r2[,c] <- sapply(res, function(v) v$series[[r]][['r2']])
-        c <- c + 1
+        #x <- x[1]$series[[r]][['x']]
+
+        s <- sapply(x, function(v) v$series[[r]][["tm"]])
+        s[sapply(s, is.null)] <- NA
+        df.tm[[paste0(r,'.',"tm")]]  <- unlist(s, use.names=F)
+
+        s <- sapply(x, function(v) v$series[[r]][["r2"]])
+        s[sapply(s, is.null)] <- NA
+        df.r2[[paste0(r,'.',"r2")]]  <- unlist(s, use.names=F)
     }
-    min.r2 <- apply(m.r2,1,min)
-    res <- res[min.r2 > .98 & ! is.na(min.r2)]
+
+    min.r2 <- apply(df.r2,1,min)
+    df.tm <- df.tm[min.r2 > .98 & ! is.na(min.r2),]
     
     # determine baseline replicate
     if (length(repl_names) < 3) {
         baseline <- repl_names[1]
     }
     else {
-        c <- 1
-        m <- matrix(ncol=length(repl_names))
-        for (r in repl_names) {
-            m[,c] <- sapply(res, function(v) v$series[[r]][['tm']])
-            c <- c + 1
-        }
-        meds <- apply(m,1,median)
-        c <- 1
+        meds <- apply(df.tm,1,median)
         diffsums = c()
+        c <- 1
         for (r in repl_names) {
-            diffsums[c] <- sum(abs(m[,c]-meds))
+            diffsums[c] <- sum(abs(df.tm[,c]-meds))
+            c <- c + 1
         }
         baseline <- repl_names[which.min(diffsums)]
     }
