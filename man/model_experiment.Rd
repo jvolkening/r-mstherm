@@ -30,4 +30,3 @@ res  <- model_proteins(expt,np=1)
 }
 
 }
-

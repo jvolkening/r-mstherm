@@ -34,4 +34,3 @@ The denominator used to calculate relative protein concentrations
     }
 }
 \keyword{internal}
-

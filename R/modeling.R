@@ -20,6 +20,11 @@
 #'   spectrum in protein-level quantification
 #' @param max_score maximum score allowed to include a
 #'   spectrum in protein-level quantification
+#' @param only_modeled (t/F) Only consider modeled proteins
+#' @param check_missing (t/F) Run simple test to filter out PSMs with missing
+#'   quantification channels where values are expected
+#' @param missing_cutoff Minimum fraction relative to surrounding data points
+#'   used in the check for missing channels
 #' @param smooth (t/F) Perform loess smoothing on the data prior to modeling
 #' @param method Protein quantification method to use (see Details)
 #' @param method.denom Method used to calculate denominator of abundance

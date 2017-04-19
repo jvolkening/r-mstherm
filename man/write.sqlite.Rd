@@ -26,4 +26,3 @@ write.sqlite(res, "/path/to/db.sqlite")
 }
 
 }
-

@@ -7,7 +7,9 @@
 model_protein(expt, protein, min_rep_psm = 0, min_smp_psm = 0,
   min_tot_psm = 0, max_inf = 1, min_score, max_score, smooth = 0,
   method = "sum", method.denom = "near", trim = 0, bootstrap = 0,
-  min_bs_psms = 8, merge_reps = 0, annot_sep = "|")
+  min_bs_psms = 8, merge_reps = 0, annot_sep = "|", max_slope = 0,
+  min_r2 = 0, min_reps = 0, only_modeled = 0, check_missing = 0,
+  missing_cutoff = 0.3)
 }
 \arguments{
 \item{expt}{An MSThermExperiment object}
@@ -52,6 +54,21 @@ and merge into single series (EXPERIMENTAL!)}
 
 \item{annot_sep}{Symbol used to separate protein group IDs (used for
 retrieval of annotations) (default: '|')}
+
+\item{max_slope}{Maximum slope to consider model (implies "only_modeled")}
+
+\item{min_r2}{Minimum R2 value to consider model (implies "only_modeled")}
+
+\item{min_reps}{Minimum number of modeled replicates for each sample to
+return protein}
+
+\item{only_modeled}{(t/F) Only consider modeled proteins}
+
+\item{check_missing}{(t/F) Run simple test to filter out PSMs with missing
+quantification channels where values are expected}
+
+\item{missing_cutoff}{Minimum fraction relative to surrounding data points
+used in the check for missing channels}
 }
 \value{
 MSThermResult object
@@ -86,4 +103,3 @@ p01  <- model_protein(expt, protein="protein01", smooth=T, bootstrap=F)
 }
 
 }
-

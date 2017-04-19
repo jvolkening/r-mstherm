@@ -31,5 +31,5 @@ Collate:
    plot.R
    analysis.R
    export.R
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1
 VignetteBuilder: knitr

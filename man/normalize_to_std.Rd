@@ -25,4 +25,3 @@ expt <- normalize_to_std(expt, "cRAP_ALBU_BOVIN")
 }
 
 }
-

@@ -6,10 +6,9 @@
 \alias{mstherm-package}
 \title{Model and analyze MS/MS-based protein melting data.}
 \description{
-\code{mstherm} is a package for modeling and analysis of MS/MS-based
-thermal proteome profiling (TPP) experiments.
+\code{mstherm} is a package for modeling and analysis of
+MS/MS-based thermal proteome profiling (TPP) experiments.
 }
 \author{
 Jeremy Volkening \email{jdv@base2bio.com}
 }
-

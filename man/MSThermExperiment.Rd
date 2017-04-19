@@ -62,4 +62,3 @@ expt    <- MSThermExperiment(control="control.tsv",annotations="annots.tsv")
 }
 
 }
-
