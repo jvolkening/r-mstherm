@@ -1,6 +1,6 @@
 Package: mstherm
 Type: Package
-Title: Analyze MS/MS protein melting data
+Title: Analyze MS/MS Protein Melting Data
 Version: 0.4.7
 Date: 2017-04-21
 Authors@R: person("Jeremy","Volkening", email="jdv@base2bio.com",

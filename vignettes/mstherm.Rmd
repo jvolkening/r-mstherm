@@ -11,6 +11,8 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+# MSTherm
+
 The `mstherm` package is used for modeling and analysing thermal proteome
 profiling (TPP) experiments. For more details on the motivation and
 methodology behind such experiments, please see [Savitski et al,
@@ -194,6 +196,26 @@ modeling can be slow (especially if you have data for several thousand
 proteins and bootstrapping is turned on), the package can utilize parallel
 processing to speed things up. This is set by the `np` parameter, which by
 default will use all available threads on the machine.
+
+
+## Inter-replicate normalization
+
+A second round of normalization can be performed to correct for differences in
+sample handling between replicates in experiments where most proteins are not
+expected to be changing and the global distribution of protein Tms is expected
+to be constant. Doing so requires that the dataset first be modeled as above
+to estimate Tms for each protein. A single replicate is then chosen as the
+baseline and correction factors are calculated for all other replicates based
+on linear regression between a set of high-quality melting temperature
+estimates. These linear corrections are applied to the intial temperature
+vector for each replicate and a new MSThermExperiment object is returned which
+can be re-modeled as above. The command to perform this inter-replicate
+normalization is:
+
+```{r, message=FALSE, results="hide"}
+expt <- normalize_to_tm( expt, res )
+res  <- model_experiment(expt, bootstrap=T, smooth=T, min_rep_psm=3, np=1)
+```
 
 ## Visualization
 

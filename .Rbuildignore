@@ -1,5 +1,6 @@
 ^\.travis\.yml$
 ^\.git
+^\.gitignore
 ^\.R(history|Data)$
 ^pre_git$
 ^cran-comments.md

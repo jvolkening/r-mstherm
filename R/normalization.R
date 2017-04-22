@@ -71,7 +71,6 @@ normalize_to_tm <- function( expt, res ) {
     tm.b <- as.vector(sapply(res, function(v) v$series[[baseline]][['tm']]))
     sample_names <- sapply(expt$samples, '[[', "name")
     for (r in repl_names) {
-        print(r)
         if (r == baseline) {
             next
         }
@@ -79,11 +78,8 @@ normalize_to_tm <- function( expt, res ) {
         l <- lm(tm.b ~ tm.u)
 
         for (s in sample_names) {
-            print(s)
             r_names <- sapply(expt$samples[[s]]$replicates, '[[', "name")
-            print(r_names)
             for (r2 in r_names) {
-                print(r2)
                 if (r2 == r) {
                     expt$samples[[s]]$replicates[[r]]$meta$temp <- expt$samples[[s]]$replicates[[r]]$meta$temp * l$coefficients[2] + l$coefficients[1]
                 }
