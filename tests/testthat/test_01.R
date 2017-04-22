@@ -1,4 +1,7 @@
 library(mstherm)
+
+Sys.unsetenv("R_TESTS") 
+
 context("TPP modeling")
 
 # Find demo project files
@@ -90,7 +93,6 @@ test_that("MSThermExperiment secondary normalization", {
 
 
 # Perform export
-write.sqlite(res3, "tmp.sqlite") # TODO: how to test?
 
 res3.df <- as.data.frame(res3)
 
@@ -100,3 +102,8 @@ test_that("MSThermResult export", {
     expect_equal( ncol(res3.df), 17)
 
 })
+
+# Fake tests (TODO: how to test these properly)?
+
+write.sqlite(res3, "tmp.sqlite")
+plot(res3)
