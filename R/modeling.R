@@ -407,7 +407,6 @@ model_experiment <- function(expt,proteins,np,...) {
         "sigmoid",
         "sigmoid.d1",
         "gen_description",
-        "pb"
     )) %dopar% {
         protein <- proteins[i]
         if (getTxtProgressBar(pb) < i) {
