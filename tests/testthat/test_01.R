@@ -32,7 +32,7 @@ test_that("MSThermExperiment normalization", {
 })
 
 # Perform typical modeling
-res1 <- model_experiment(norm, bootstrap=T, smooth=T, min_rep_psm=0, np=2)
+res1 <- model_experiment(norm, bootstrap=T, smooth=T, min_rep_psm=0, np=2, check_missing=T)
 res2 <- model_experiment(norm, bootstrap=T, smooth=T, min_rep_psm=3, np=2)
 res3 <- model_experiment(norm, bootstrap=T, smooth=F, min_rep_psm=3, np=2)
 sgl1 <- res1$P38707
@@ -107,3 +107,5 @@ test_that("MSThermResult export", {
 
 write.sqlite(res3, "tmp.sqlite")
 plot(res3)
+summary(sgl1)
+summary(res3)
