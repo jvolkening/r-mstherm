@@ -278,7 +278,7 @@ model_protein <- function( expt, protein,
         # undocumented!)
 
         # HERE BE DRAGONS!
-        if (merge_reps & length(merged_profiles)>0) {
+        if (merge_reps & length(merged_profiles)>0) { # nocov start
             
             sfs <- c()
             for (i in 1:(length(merged_temps)-1)) {
@@ -333,7 +333,7 @@ model_protein <- function( expt, protein,
             }
             self[['merged']][[sample$name]] <- fit
 
-        }
+        } # nocov end
 
     }
 
