@@ -1,6 +1,7 @@
 ## Test environments
 * local Debian 8 install, R 3.3.3
-* Ubuntu 12.04.5 LTS, R 3.3.3 (on Travis-CI)
+* Ubuntu 12.04.5 LTS, R 3.3.3, R dev (on Travis-CI)
+* Windows (win-builder), R dev 2017-04-22 r72587
 
 ## R CMD check results
 There were no ERRORs or WARNINGs or NOTES. 
