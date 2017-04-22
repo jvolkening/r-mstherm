@@ -4,7 +4,7 @@
 \alias{normalize_to_profile}
 \title{Normalize to a profile.}
 \usage{
-normalize_to_profile(replicate, profile, model)
+normalize_to_profile(replicate, profile, model = T)
 }
 \arguments{
 \item{replicate}{An MSThermReplicate object}

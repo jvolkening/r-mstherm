@@ -18,30 +18,49 @@ expt <- MSThermExperiment(control, annotations=annots)
 
 test_that("MSThermExperiment creation", {
     expect_is(expt, "MSThermExperiment")
-    expect_equal(expt$samples$Control$replicates$C1$data$TMT10.126[6],
-        4568753, tolerance=1)
 })
 
 # Perform typical normalization
-norm <- normalize_to_std(expt, "cRAP_ALBU_BOVIN")
+spike_in <- "cRAP_ALBU_BOVIN"
+norm.std <- normalize_to_std(expt, spike_in)
+
+prof <- c(50.0, 50.5, 47.5, 42.0, 37.0, 25.0, 16.0, 11.5, 10.5, 10.0)
+norm.prf <- expt
+norm.prf$samples$Control$replicates$C1 <- normalize_to_profile(
+    expt$samples$Control$replicates$C1, prof
+)
+norm.prf$samples$Treated$replicates$T1 <- normalize_to_profile(
+    expt$samples$Treated$replicates$T1, prof
+)
 
 test_that("MSThermExperiment normalization", {
-    expect_is(norm, "MSThermExperiment")
-    expect_equal(norm$samples$Control$replicates$C1$data$TMT10.126[6],
-        4568561, tolerance=1)
+    expect_is(norm.std, "MSThermExperiment")
+    expect_is(norm.prf, "MSThermExperiment")
+
+    # intensities should be normalized
+    expect_equal(expt$samples$Control$replicates$C1$data$TMT10.128N[6],
+        2685251, tolerance=1)
+    expect_equal(norm.std$samples$Control$replicates$C1$data$TMT10.126[6],
+        2393289, tolerance=1)
+    expect_equal(norm.prf$samples$Control$replicates$C1$data$TMT10.126[6],
+        2378632, tolerance=1)
 })
 
 # Perform typical modeling
-res1 <- model_experiment(norm, bootstrap=T, smooth=T, min_rep_psm=0, np=2, check_missing=T)
-res2 <- model_experiment(norm, bootstrap=T, smooth=T, min_rep_psm=3, np=2)
-res3 <- model_experiment(norm, bootstrap=T, smooth=F, min_rep_psm=3, np=2)
+res0 <- model_experiment(norm.std, bootstrap=T, smooth=T, min_rep_psm=0, np=2, check_missing=F)
+res1 <- model_experiment(norm.std, bootstrap=T, smooth=T, min_rep_psm=0, np=2, check_missing=T)
+res2 <- model_experiment(norm.std, bootstrap=T, smooth=T, min_rep_psm=3, np=2)
+res3 <- model_experiment(norm.std, bootstrap=T, smooth=F, min_rep_psm=3, np=2)
+sgl0 <- res0$P38707
 sgl1 <- res1$P38707
 sgl2 <- res1$cRAP_ALBU_BOVIN
+print(sgl1$series$C1$psm)
 
 test_that("MSThermExperiment modeling", {
     expect_is(res1, "MSThermResultSet")
     expect_is(res2, "MSThermResultSet")
     expect_is(res3, "MSThermResultSet")
+    expect_is(sgl0,  "MSThermResult")
     expect_is(sgl1,  "MSThermResult")
     expect_is(sgl2,  "MSThermResult")
 
@@ -60,7 +79,10 @@ test_that("MSThermExperiment modeling", {
     expect_equal(sgl1$series$C1$r2,     0.99,  tolerance=0.01)
     expect_equal(sgl1$series$C1$rmsd,   0.03,  tolerance=0.01)
     expect_equal(sgl1$series$C1$inf,    0.16,  tolerance=0.01)
-    expect_equal(sgl1$series$C1$psm,   46,     tolerance=0.01)
+
+    #  missing value check should remove one PSM
+    expect_equal(sgl0$series$C1$psm,   46,     tolerance=0.01)
+    expect_equal(sgl1$series$C1$psm,   45,     tolerance=0.01)
 
     expect_equal(sgl1$series$T1$tm,    52.1,   tolerance=0.1)
     expect_equal(sgl1$series$T1$k,    988,     tolerance=2)
@@ -79,10 +101,10 @@ test_that("MSThermExperiment modeling", {
 
 
 # Perform secondary normalization
-norm2 <- normalize_to_tm(norm, res2)
+norm2 <- normalize_to_tm(norm.std, res2)
 res2  <- model_experiment(norm2, bootstrap=T, smooth=T, min_rep_psm=3, np=2)
 
-t1 <- norm$samples$Treated$replicates$T1$meta$temp[[5]]
+t1 <- norm.std$samples$Treated$replicates$T1$meta$temp[[5]]
 t2 <- norm2$samples$Treated$replicates$T1$meta$temp[[5]]
 
 test_that("MSThermExperiment secondary normalization", {
