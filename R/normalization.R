@@ -163,7 +163,7 @@ normalize_to_std <- function( expt, protein ) {
 #'
 #' @export
 
-normalize_to_profile <- function( replicate, profile, model ) {
+normalize_to_profile <- function( replicate, profile, model=T ) {
 
     replicate$data <- norm_to_profile(replicate,profile, model)
     return( replicate )
