@@ -23,14 +23,10 @@
 #'   The "meta_file" should be tab-delimited text and contain two columns
 #'   labeled "channel" and "temp".
 #'   The "data_file" should be tab-delimited text and contain, at a minimum,
-#'   the following columns (others will currently be ignored):
+#'   the following columns:
 #'   \describe{
 #'      \item{"peptide"}{Sequence of the matched peptide in single-letter IUPAC}
 #'      \item{"protein"}{Protein or protein group to which the peptide belongs}
-#'      \item{"coelute_inf"}{Calculated precursor co-isolation interference
-#'         (0.0-1.0)}
-#'      \item{"score"}{Calculated precursor co-isolation interference
-#'         (0.0-1.0)}
 #'      \item{"..."}{One column per isobaric channel, containing absolute
 #'         quantification values. Column names must match those in the
 #'         "channel" column of the meta file, with the exception that R will
@@ -38,6 +34,13 @@
 #'         rules. To be safe, use only letters, digits, underscores, and
 #'         periods in channel names and never start with a digit (e.g. use "TMT.126"
 #'         rather than "126")}
+#'   }
+#'   The following columns can also be utilized for filtering if included (all
+#'   others will simply be ignored):
+#'   \describe{
+#'      \item{"coelute_inf"}{Calculated precursor co-isolation interference
+#'         (0.0-1.0)}
+#'      \item{"score"}{Score assigned by the processing software to the PSM}
 #'   }
 #'   "annotations" should contain two columns with the headers "name" and
 #'   "annotation". "name" should match the protein names in the data files,

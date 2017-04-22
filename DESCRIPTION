@@ -1,15 +1,14 @@
 Package: mstherm
 Type: Package
 Title: Analyze MS/MS protein melting data
-Version: 0.4.6
-Date: 2017-03-29
+Version: 0.4.7
+Date: 2017-04-21
 Authors@R: person("Jeremy","Volkening", email="jdv@base2bio.com",
     role=c("aut","cre"))
 Description: Software to aid in modeling and analyzing mass-spectrometry-based
     protein melting data. Quantitative data is imported and normalized and
-    thermal behavior is modeled at the protein level. Functions exist to
-    simplify visualization, exploratory analysis, and analsysis of melting
-    temperature shifts.
+    thermal behavior is modeled at the protein level. Methods exist for
+    normalization, modeling, visualization, and export of results.
 License: GPL-3
 Imports:
     foreach,
