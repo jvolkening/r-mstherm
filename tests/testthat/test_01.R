@@ -35,7 +35,6 @@ res3 <- model_experiment(norm, bootstrap=T, smooth=F, min_rep_psm=3, np=2)
 sgl1 <- res1$P38707
 sgl2 <- res1$cRAP_ALBU_BOVIN
 
-
 test_that("MSThermExperiment modeling", {
     expect_is(res1, "MSThermResultSet")
     expect_is(res2, "MSThermResultSet")
@@ -72,5 +71,32 @@ test_that("MSThermExperiment modeling", {
     # protein that should not have modeled at all
     expect_false(sgl2$series$C1$is.fitted)
     expect_equal(sgl2$series$C1$tm, NA)
+
+})
+
+
+# Perform secondary normalization
+norm2 <- normalize_to_tm(norm, res2)
+res2  <- model_experiment(norm2, bootstrap=T, smooth=T, min_rep_psm=3, np=2)
+
+t1 <- norm$samples$Treated$replicates$T1$meta$temp[[5]]
+t2 <- norm2$samples$Treated$replicates$T1$meta$temp[[5]]
+
+test_that("MSThermExperiment secondary normalization", {
+    expect_is(norm2, "MSThermExperiment")
+    expect_equal( t1, 45.0, tolerance=0.1 )
+    expect_equal( t2, 44.3, tolerance=0.1 )
+})
+
+
+# Perform export
+write.sqlite(res3, "tmp.sqlite") # TODO: how to test?
+
+res3.df <- as.data.frame(res3)
+
+test_that("MSThermResult export", {
+
+    expect_equal( nrow(res3.df), 5)
+    expect_equal( ncol(res3.df), 17)
 
 })
