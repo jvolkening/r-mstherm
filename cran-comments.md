@@ -5,7 +5,15 @@
 * Windows 10, R 3.4.1 i386 and x64
 
 ## R CMD check results
-There were no ERRORs or WARNINGs or NOTES. 
+There were no ERRORs or WARNINGs. 
+
+There was 1 NOTE:
+
+* checking CRAN incoming feasibility ... NOTE
+  Possibly mis-spelled words in DESCRIPTION:
+    spectrometry (8:61)
+
+  This word is spelled correctly
 
 ## Downstream dependencies
 There are currently no downstream dependencies for this package
