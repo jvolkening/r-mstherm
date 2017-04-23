@@ -532,9 +532,11 @@ try_fit <- function(ratios,temps,trim,smooth) {
         y <- ratios[which.max(temps):length(temps)]
     }
 
+    print(paste("before:",y))
     if (smooth) {
-        f <- loess(y ~ x, span=0.6)
+        f <- loess(y ~ x, span=0.65)
         y <- f$fitted
+        print(paste("after:",y))
     }
 
     fit <- list()
