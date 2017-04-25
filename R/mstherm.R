@@ -15,7 +15,7 @@
 #'  getTxtProgressBar
 #' @importFrom parallel detectCores
 #' @importFrom foreach foreach "%dopar%"
-#' @importFrom doParallel registerDoParallel
+#' @importFrom doParallel registerDoParallel stopImplicitCluster
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom nls2 nls2
 #' @importFrom plotrix addtable2plot

@@ -423,6 +423,9 @@ model_experiment <- function(expt,proteins,np,...) {
         results[!sapply(results,is.null)],
         class = "MSThermResultSet"
     )
+
+    stopImplicitCluster()
+
     return( self )
 
 }
