@@ -3,6 +3,7 @@ MSTherm :: Analyze MS/MS protein melting data
 
 [![Build Status](https://travis-ci.org/jvolkening/r-mstherm.svg?branch=master)](https://travis-ci.org/jvolkening/r-mstherm)
 [![Coverage Status](https://coveralls.io/repos/github/jvolkening/r-mstherm/badge.svg?branch=master)](https://coveralls.io/github/jvolkening/r-mstherm?branch=master)
+[![CRAN](https://img.shields.io/cran/v/mstherm.svg)]()
 
 
 **MSTherm** is an R package to aid in modeling and analyzing mass
