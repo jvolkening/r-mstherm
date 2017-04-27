@@ -29,7 +29,7 @@ norm.prf <- expt
 norm.prf$samples$Control$replicates$C1 <- normalize_to_profile(
     expt$samples$Control$replicates$C1,
     prof,
-    plot=F
+    plot=T
 )
 norm.prf$samples$Treated$replicates$T1 <- normalize_to_profile(
     expt$samples$Treated$replicates$T1,
@@ -51,10 +51,10 @@ test_that("MSThermExperiment normalization", {
 })
 
 # Perform typical modeling
-res0 <- model_experiment(norm.std, bootstrap=T, smooth=T, min_rep_psm=0, np=2, check_missing=F)
+res0 <- model_experiment(norm.std, bootstrap=F, smooth=T, min_rep_psm=0, np=2, check_missing=F)
 res1 <- model_experiment(norm.std, bootstrap=F, smooth=T, min_rep_psm=0, np=2, check_missing=T)
 res2 <- model_experiment(norm.std, bootstrap=F, smooth=T, min_rep_psm=3, np=2)
-res3 <- model_experiment(norm.std, bootstrap=F, smooth=F, min_rep_psm=3, np=2)
+res3 <- model_experiment(norm.std, bootstrap=T, smooth=F, min_rep_psm=3, np=2)
 sgl0 <- res0$P38707
 sgl1 <- res1$P38707
 sgl2 <- res1$cRAP_ALBU_BOVIN
