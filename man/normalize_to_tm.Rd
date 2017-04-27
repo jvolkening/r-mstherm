@@ -30,8 +30,12 @@ is calculated based on all replicates, and each replicate is normalized to
 this based on the calculated slope and intercept of the input data.
 }
 \examples{
-\dontrun{
-expt <- normalize_to_tm(expt, res)
-}
+control <- system.file("extdata", "demo_project/control.tsv", package="mstherm")
+annots  <- system.file("extdata", "demo_project/annots.tsv",  package="mstherm")
+expt    <- MSThermExperiment(control, annotations=annots)
+expt    <- normalize_to_std(expt, "cRAP_ALBU_BOVIN", plot=FALSE)
+res     <- model_experiment(expt, smooth=TRUE, bootstrap=FALSE, np=2)
+
+expt    <- normalize_to_tm(expt, res)
 
 }

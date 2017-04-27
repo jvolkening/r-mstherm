@@ -21,8 +21,14 @@ individual record. The schema used for the 'data' table can be seen in the
 code below.
 }
 \examples{
-\dontrun{
-write.sqlite(res, "/path/to/db.sqlite")
-}
+control <- system.file("extdata", "demo_project/control.tsv", package="mstherm")
+annots  <- system.file("extdata", "demo_project/annots.tsv",  package="mstherm")
+expt    <- MSThermExperiment(control, annotations=annots)
+expt    <- normalize_to_std(expt, "cRAP_ALBU_BOVIN", plot=FALSE)
+res     <- model_experiment(expt, bootstrap=FALSE, np=2)
+
+fn <- tempfile(fileext = ".sqlite")
+write.sqlite(res, fn)
+unlink(fn) # for example only
 
 }

@@ -49,9 +49,9 @@
 #' @return An MSThermExperiment object
 #'
 #' @examples
-#'\dontrun{
-#' expt    <- MSThermExperiment(control="control.tsv",annotations="annots.tsv")
-#'}
+#' control <- system.file("extdata", "demo_project/control.tsv", package="mstherm")
+#' annots  <- system.file("extdata", "demo_project/annots.tsv",  package="mstherm")
+#' expt    <- MSThermExperiment(control, annotations=annots)
 #'
 #' @export
 
@@ -161,10 +161,7 @@ MSThermReplicate <- function(name, data, meta, wd) {
 #' @return Nothing
 #'
 #' @examples
-#'\dontrun{
-#' m  <- model_protein(expt,"P38707")
-#' summmary(m)
-#'}
+#' # see model_protein() for an example
 #'
 #' @export
 
@@ -197,10 +194,7 @@ summary.MSThermResult <- function(object, ...) {
 #' @return Nothing
 #'
 #' @examples
-#'\dontrun{
-#' res  <- model_experiment(expt)
-#' summmary(res)
-#'}
+#' # see model_experiment() for an example
 #'
 #' @export
 

@@ -4,12 +4,16 @@
 \alias{normalize_to_std}
 \title{Normalize to a spike-in standard.}
 \usage{
-normalize_to_std(expt, protein)
+normalize_to_std(expt, protein, model = T, plot = T)
 }
 \arguments{
 \item{expt}{an MSThermExperiment object}
 
 \item{protein}{ID of a protein to normalize against}
+
+\item{model}{whether to fit scale factors to model}
+
+\item{plot}{(T/f) whether to display a summary plot}
 }
 \value{
 An MsThermExperiment object with normalized data slots
@@ -20,8 +24,10 @@ spike-in protein standard (assumed to be present in equimolar amounts in
 each channel).
 }
 \examples{
-\dontrun{
-expt <- normalize_to_std(expt, "cRAP_ALBU_BOVIN")
-}
+control <- system.file("extdata", "demo_project/control.tsv", package="mstherm")
+annots  <- system.file("extdata", "demo_project/annots.tsv",  package="mstherm")
+expt    <- MSThermExperiment(control, annotations=annots)
+
+expt    <- normalize_to_std(expt, "cRAP_ALBU_BOVIN", plot=FALSE)
 
 }

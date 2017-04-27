@@ -25,9 +25,6 @@ Since this function makes multiple sequential calls to
   will only overwrite the previous output.
 }
 \examples{
-\dontrun{
-res  <- model_experiment(expt)
-plot(res)
-}
+# see plot.MSThermResult for an example
 
 }

@@ -19,9 +19,13 @@
 #' @return An MsThermExperiment object with re-normalized data slots
 #'
 #' @examples
-#'\dontrun{
-#' expt <- normalize_to_tm(expt, res)
-#'}
+#' control <- system.file("extdata", "demo_project/control.tsv", package="mstherm")
+#' annots  <- system.file("extdata", "demo_project/annots.tsv",  package="mstherm")
+#' expt    <- MSThermExperiment(control, annotations=annots)
+#' expt    <- normalize_to_std(expt, "cRAP_ALBU_BOVIN", plot=FALSE)
+#' res     <- model_experiment(expt, smooth=TRUE, bootstrap=FALSE, np=2)
+#'
+#' expt    <- normalize_to_tm(expt, res)
 #'
 #' @export
 
@@ -93,17 +97,26 @@ normalize_to_tm <- function( expt, res ) {
 #'
 #' @param expt an MSThermExperiment object
 #' @param protein ID of a protein to normalize against
+#' @param model whether to fit scale factors to model
+#' @param plot (T/f) whether to display a summary plot
 #'
 #' @return An MsThermExperiment object with normalized data slots
 #'
 #' @examples
-#'\dontrun{
-#' expt <- normalize_to_std(expt, "cRAP_ALBU_BOVIN")
-#'}
+#' control <- system.file("extdata", "demo_project/control.tsv", package="mstherm")
+#' annots  <- system.file("extdata", "demo_project/annots.tsv",  package="mstherm")
+#' expt    <- MSThermExperiment(control, annotations=annots)
+#'
+#' expt    <- normalize_to_std(expt, "cRAP_ALBU_BOVIN", plot=FALSE)
 #'
 #' @export
 
-normalize_to_std <- function( expt, protein ) {
+normalize_to_std <- function(
+    expt,
+    protein,
+    model=T,
+    plot=T
+) {
 
     n_replicates <- length(unlist(lapply(expt$samples,
         "[[", "replicates"),recursive=F))
@@ -141,22 +154,33 @@ normalize_to_std <- function( expt, protein ) {
 #' @description Normalizes an MSThermReplicate based on a pre-determined
 #' vector of relative abundances
 #'
-#' @param replicate An MSThermReplicate object
-#' @param profile A vector of relative values
-#' @param model Whether to fit scale factors to model
+#' @param replicate an MSThermReplicate object
+#' @param profile a vector of relative values
+#' @param model whether to fit scale factors to model
+#' @param plot (T/f) whether to display a summary plot
 #'
 #' @return An MsThermReplicate object with normalized data slots
 #'
 #' @examples
-#'\dontrun{
-#' expt$ <- normalize_to_profile(expt, concentrations, model=T)
-#'}
+#' control <- system.file("extdata", "demo_project/control.tsv", package="mstherm")
+#' annots  <- system.file("extdata", "demo_project/annots.tsv",  package="mstherm")
+#' expt    <- MSThermExperiment(control, annotations=annots)
+#'
+#' profile <- c(50.0, 50.5, 47.5, 42.0, 37.0, 25.0, 16.0, 11.5, 10.5, 10.0)
+#' expt$samples$Control$replicates$C1 <- normalize_to_profile(
+#'    expt$samples$Control$replicates$C1, profile, plot=FALSE
+#' )
 #'
 #' @export
 
-normalize_to_profile <- function( replicate, profile, model=T ) {
+normalize_to_profile <- function(
+    replicate,
+    profile,
+    model=T,
+    plot=T
+) {
 
-    replicate$data <- norm_to_profile(replicate,profile, model)
+    replicate$data <- norm_to_profile(replicate, profile, model, plot)
     return( replicate )
 
 }
@@ -164,7 +188,12 @@ normalize_to_profile <- function( replicate, profile, model=T ) {
 
 
 # performs the actual profile normalization
-norm_to_profile <- function(replicate,profile,model=T) {
+norm_to_profile <- function(
+    replicate,
+    profile,
+    model=T,
+    plot=T
+) {
 
     cols <- brewer.pal(3,"Set1")
 
@@ -197,11 +226,15 @@ norm_to_profile <- function(replicate,profile,model=T) {
     norm[,quant_columns[order(replicate$meta$temp)] ] <- t(t(as.matrix(quant))*sf)
     corrected <- ratios*sf
 
-    plot( temps,ratios,ylim=c(0,max(c(ratios,std.ratios))),xlab=expression(paste("temperature ", degree, "C")),ylab="relative fraction remaining",col=cols[3],main=replicate$name)
-    points(temps,std.ratios,col=cols[1])
-    points(temps,corrected,col=cols[2])
-    if (model) {
-        curve(sigmoid(p,k,m,x),col=cols[2],add=T)
+    if (plot) {
+
+        plot( temps,ratios,ylim=c(0,max(c(ratios,std.ratios))),xlab=expression(paste("temperature ", degree, "C")),ylab="relative fraction remaining",col=cols[3],main=replicate$name)
+        points(temps,std.ratios,col=cols[1])
+        points(temps,corrected,col=cols[2])
+        if (model) {
+            curve(sigmoid(p,k,m,x),col=cols[2],add=T)
+        }
+
     }
 
     return(norm)
@@ -212,7 +245,12 @@ norm_to_profile <- function(replicate,profile,model=T) {
 
 # Perfoms the actual normalization to a spike-in standard (see
 # "normalize_to_std" for the public method)
-norm_to_std <- function(replicate,protein) {
+norm_to_std <- function(
+    replicate,
+    protein,
+    model=T,
+    plot=T
+) {
 
     cols <- brewer.pal(3,"Set1")
 
@@ -233,33 +271,45 @@ norm_to_std <- function(replicate,protein) {
 
     corrected <- ratios/std.ratios
 
-    st.coarse <- expand.grid(p=seq(0,0.4,by=0.1),k=seq(0,2000,by=100),m=seq(20,80,by=5))
-    x <- temps[corrected < 1.2]
-    y <- corrected[corrected < 1.2]
-    mod <- nls2(y~sigmoid(p,k,m,x),data=list(x=x,y=y),start=st.coarse,algorithm="brute-force",control=nls.control(warnOnly=T,maxiter=50000))
-    fit <- nls2(y~sigmoid(p,k,m,x),data=list(x=x,y=y),start=mod,control=nls.control(warnOnly=F,maxiter=50000),algorithm="port",lower=c(0,1,1),upper=c(0.5,2000,100))
-    p <- coefficients(fit)[['p']]
-    k <- coefficients(fit)[['k']]
-    m <- coefficients(fit)[['m']]
-    yfit <- sigmoid(p,k,m,temps)
+    if (model) {
+        st.coarse <- expand.grid(p=seq(0,0.4,by=0.1),k=seq(0,2000,by=100),m=seq(20,80,by=5))
+        x <- temps[corrected < 1.2]
+        y <- corrected[corrected < 1.2]
+        mod <- nls2(y~sigmoid(p,k,m,x),data=list(x=x,y=y),start=st.coarse,algorithm="brute-force",control=nls.control(warnOnly=T,maxiter=50000))
+        fit <- nls2(y~sigmoid(p,k,m,x),data=list(x=x,y=y),start=mod,control=nls.control(warnOnly=F,maxiter=50000),algorithm="port",lower=c(0,1,1),upper=c(0.5,2000,100))
+        p <- coefficients(fit)[['p']]
+        k <- coefficients(fit)[['k']]
+        m <- coefficients(fit)[['m']]
+        yfit <- sigmoid(p,k,m,temps)
 
-    sf <- yfit/ratios
+        sf <- yfit/ratios
+    }
+    else {
+        sf <- corrected/ratios
+    }
+
     norm <- replicate$data
     norm[,quant_columns[order(replicate$meta$temp)] ] <- t(t(as.matrix(quant))*sf)
 
-    plot( temps,ratios,ylim=c(0,max(c(ratios,std.ratios))),xlab=expression(paste("temperature ", degree, "C")),ylab="relative fraction remaining",col=cols[3],main=replicate$name)
-    points(temps,std.ratios,col=cols[1])
-    for (i in 1:ncol(std)) {
-        v <- c(1:nrow(std))
-        for (j in 1:nrow(std)) {
-            v[j] <- std[j,i]/std[j,1]
+    if (plot) {
+
+        plot( temps,ratios,ylim=c(0,max(c(ratios,std.ratios))),xlab=expression(paste("temperature ", degree, "C")),ylab="relative fraction remaining",col=cols[3],main=replicate$name)
+        points(temps,std.ratios,col=cols[1])
+        for (i in 1:ncol(std)) {
+            v <- c(1:nrow(std))
+            for (j in 1:nrow(std)) {
+                v[j] <- std[j,i]/std[j,1]
+            }
+            if (quantile(v,.25,na.rm=T) < quantile(v,.75,na.rm=T)) {
+                arrows(temps[i],quantile(v,.25,na.rm=T),temps[i],quantile(v,.75,na.rm=T),code=3,angle=90,length=0.02,col=cols[1])
+            }
         }
-        if (quantile(v,.25,na.rm=T) < quantile(v,.75,na.rm=T)) {
-            arrows(temps[i],quantile(v,.25,na.rm=T),temps[i],quantile(v,.75,na.rm=T),code=3,angle=90,length=0.02,col=cols[1])
+        points(temps,corrected,col=cols[2])
+        if (model) {
+            curve(sigmoid(p,k,m,x),col=cols[2],add=T)
         }
+
     }
-    points(temps,corrected,col=cols[2])
-    curve(sigmoid(p,k,m,x),col=cols[2],add=T)
 
     return(norm)
 

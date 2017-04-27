@@ -19,9 +19,6 @@ Print a summary of an MSThermResult, including samples and
 parameters.
 }
 \examples{
-\dontrun{
-m  <- model_protein(expt,"P38707")
-summmary(m)
-}
+# see model_protein() for an example
 
 }

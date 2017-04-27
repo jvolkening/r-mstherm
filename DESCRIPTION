@@ -6,9 +6,11 @@ Date: 2017-04-21
 Authors@R: person("Jeremy","Volkening", email="jdv@base2bio.com",
     role=c("aut","cre"))
 Description: Software to aid in modeling and analyzing mass-spectrometry-based
-    protein melting data. Quantitative data is imported and normalized and
+    proteome melting data. Quantitative data is imported and normalized and
     thermal behavior is modeled at the protein level. Methods exist for
-    normalization, modeling, visualization, and export of results.
+    normalization, modeling, visualization, and export of results. For a
+    general introduction to MS-based thermal profiling, see Savitski et al.
+    (2014) <doi:10.1126/science.1255784>.
 License: GPL-3
 Imports:
     foreach,

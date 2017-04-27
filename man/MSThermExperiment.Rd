@@ -60,8 +60,8 @@ Both parameters can take either a data frame or a tab-delimited
   and "annotation" can contain any text (generally a functional description)
 }
 \examples{
-\dontrun{
-expt    <- MSThermExperiment(control="control.tsv",annotations="annots.tsv")
-}
+control <- system.file("extdata", "demo_project/control.tsv", package="mstherm")
+annots  <- system.file("extdata", "demo_project/annots.tsv",  package="mstherm")
+expt    <- MSThermExperiment(control, annotations=annots)
 
 }

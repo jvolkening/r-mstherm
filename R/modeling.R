@@ -60,9 +60,13 @@
 #' @return MSThermResult object
 #'
 #' @examples
-#'\dontrun{
-#' p01  <- model_protein(expt, protein="protein01", smooth=T, bootstrap=F)
-#'}
+#' control <- system.file("extdata", "demo_project/control.tsv", package="mstherm")
+#' annots  <- system.file("extdata", "demo_project/annots.tsv",  package="mstherm")
+#' expt    <- MSThermExperiment(control, annotations=annots)
+#' expt    <- normalize_to_std(expt, "cRAP_ALBU_BOVIN", plot=FALSE)
+#'
+#' model   <- model_protein(expt, "P38707", smooth=TRUE, bootstrap=FALSE)
+#' summary(model)
 #'
 #' @export
 
@@ -294,10 +298,13 @@ model_protein <- function( expt, protein,
 #' @return MSThermResultSet object
 #'
 #' @examples
-#'\dontrun{
-#' res  <- model_proteins(expt,proteins=c("Q03262","P32582"))
-#' res  <- model_proteins(expt,np=1)
-#'}
+#' control <- system.file("extdata", "demo_project/control.tsv", package="mstherm")
+#' annots  <- system.file("extdata", "demo_project/annots.tsv",  package="mstherm")
+#' expt    <- MSThermExperiment(control, annotations=annots)
+#' expt    <- normalize_to_std(expt, "cRAP_ALBU_BOVIN", plot=FALSE)
+#'
+#' res     <- model_experiment(expt, bootstrap=FALSE, np=2)
+#' summary(res)
 #'
 #' @export
 
@@ -453,11 +460,9 @@ try_fit <- function(ratios,temps,trim,smooth) {
         y <- ratios[which.max(temps):length(temps)]
     }
 
-    print(paste("before:",y))
     if (smooth) {
         f <- loess(y ~ x, span=0.65)
         y <- f$fitted
-        print(paste("after:",y))
     }
 
     fit <- list()

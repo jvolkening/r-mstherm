@@ -4,14 +4,16 @@
 \alias{normalize_to_profile}
 \title{Normalize to a profile.}
 \usage{
-normalize_to_profile(replicate, profile, model = T)
+normalize_to_profile(replicate, profile, model = T, plot = T)
 }
 \arguments{
-\item{replicate}{An MSThermReplicate object}
+\item{replicate}{an MSThermReplicate object}
 
-\item{profile}{A vector of relative values}
+\item{profile}{a vector of relative values}
 
-\item{model}{Whether to fit scale factors to model}
+\item{model}{whether to fit scale factors to model}
+
+\item{plot}{(T/f) whether to display a summary plot}
 }
 \value{
 An MsThermReplicate object with normalized data slots
@@ -21,8 +23,13 @@ Normalizes an MSThermReplicate based on a pre-determined
 vector of relative abundances
 }
 \examples{
-\dontrun{
-expt$ <- normalize_to_profile(expt, concentrations, model=T)
-}
+control <- system.file("extdata", "demo_project/control.tsv", package="mstherm")
+annots  <- system.file("extdata", "demo_project/annots.tsv",  package="mstherm")
+expt    <- MSThermExperiment(control, annotations=annots)
+
+profile <- c(50.0, 50.5, 47.5, 42.0, 37.0, 25.0, 16.0, 11.5, 10.5, 10.0)
+expt$samples$Control$replicates$C1 <- normalize_to_profile(
+   expt$samples$Control$replicates$C1, profile, plot=FALSE
+)
 
 }

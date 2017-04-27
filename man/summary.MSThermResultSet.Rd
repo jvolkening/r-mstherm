@@ -19,9 +19,6 @@ Print a summary of an MSThermResultSet, including samples and
 parameters.
 }
 \examples{
-\dontrun{
-res  <- model_experiment(expt)
-summmary(res)
-}
+# see model_experiment() for an example
 
 }
