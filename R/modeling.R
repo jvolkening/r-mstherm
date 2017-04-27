@@ -34,8 +34,6 @@
 #'   intervals (slow)
 #' @param min_bs_psms Minimum number of spectral matches required to perform
 #'   bootstrapping
-#' @param merge_reps Treat replicates as overlapping temperature series and
-#'   and merge into single series (EXPERIMENTAL!)
 #' @param annot_sep Symbol used to separate protein group IDs (used for
 #'   retrieval of annotations) (default: '|')
 #'
@@ -81,7 +79,6 @@ model_protein <- function( expt, protein,
   trim         = 0,
   bootstrap    = 0,
   min_bs_psms  = 8,
-  merge_reps   = 0,
   annot_sep    = '|',
   max_slope    = 0,
   min_r2       = 0,
@@ -121,12 +118,7 @@ model_protein <- function( expt, protein,
         n_replicates <- length(sample$replicates)
         self$sample_names[i_sample] <- sample$name
 
-        # Track combined data for using "merge_reps"
-        merged_profiles <- c()
-        merged_temps   <- c()
-        merged_splits  <- c(0)
-        merged_psms    <- 0
-        n_reps         <- 0
+        n_reps <- 0
 
         # Process each replicate
         for (i_replicate in 1:n_replicates) {
@@ -193,12 +185,6 @@ model_protein <- function( expt, protein,
             }
 
             profile <- gen_profile(quant,method,method.denom=method.denom)
-
-            # Updated merged variables for use with merge_reps
-            merged_profiles <- c(merged_profiles,profile)
-            merged_temps    <- c(merged_temps,temps)
-            merged_splits   <- c(merged_splits, length(merged_temps))
-            merged_psms     <- merged_psms + n_psms
 
             fit <- try_fit(profile, temps, trim=trim, smooth=smooth)
             fit$is.fitted <- !is.null(fit)
@@ -273,67 +259,6 @@ model_protein <- function( expt, protein,
         if (n_reps < min_reps) {
             return( NULL )
         }
-        
-        # Handle merging of replicates (currently ALPHA and intentionally
-        # undocumented!)
-
-        # HERE BE DRAGONS!
-        if (merge_reps & length(merged_profiles)>0) { # nocov start
-            
-            sfs <- c()
-            for (i in 1:(length(merged_temps)-1)) {
-                for (j in (i+1):length(merged_temps)) {
-                    if (merged_temps[i] == merged_temps[j]) {
-                        sfs <- c(sfs,merged_profiles[i]/merged_profiles[j])
-                    }
-                }
-            }
-
-            # Here we renormalize the second sample to the first,
-            # ASSUMING only two samples of equal length !!!!
-            x.merged <- merged_temps
-            y.merged <- merged_profiles
-            if (length(sfs)>0) {
-                #sf <- sum(sfs)/length(sfs)
-                sf <- median(sfs)
-                e <- length(merged_profiles)
-                p <- e/2+1
-                merged_profiles[p:e] <- merged_profiles[p:e] * sf
-                trim.l <- floor( (length(sfs)+1)/2 )
-                trim.r <- floor( (length(sfs)+0)/2 )
-                if (trim.l > 0) {
-                    merged_profiles <- merged_profiles[-((p-trim.l):(p+trim.r-1))]
-                    merged_temps    <- merged_temps[-((p-trim.l):(p+trim.r-1))]
-                }
-                x.merged <- merged_temps
-                y.merged <- merged_profiles
-
-                merged_profiles <- merged_profiles[order(merged_temps)]
-                merged_profiles <- abs_to_ratio(merged_profiles,method=method.denom)
-                merged_temps    <- merged_temps[order(merged_temps)]
-            } 
-
-            fit <- try_fit(merged_profiles,merged_temps,trim=trim,smooth=smooth)
-            fit$is.fitted <- !is.null(fit)
-            fit$x.merged <- x.merged
-            fit$y.merged <- y.merged
-            fit$psm      <- merged_psms
-            fit$splits   <- merged_splits
-            fit$name     <- sample$name
-            fit$sample   <- sample$name
-            fit$x        <- merged_temps
-            fit$y        <- merged_profiles
-
-            if (! fit$is.fitted) {
-                fit$tm    <- NA
-                fit$slope <- NA
-                fit$k     <- NA
-                fit$plat  <- NA
-                fit$r2    <- NA
-            }
-            self[['merged']][[sample$name]] <- fit
-
-        } # nocov end
 
     }
 
@@ -348,13 +273,6 @@ model_protein <- function( expt, protein,
     # Filter on worst R2
     if (worst_r2 < min_r2) {
         return( NULL )
-    }
-
-    # If asked to merge reps, replace individual replicates with merged
-    # profiles
-    if (merge_reps) {
-        self$series <- self$merged
-        self$merged <- NULL
     }
 
     return( self )
