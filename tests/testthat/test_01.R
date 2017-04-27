@@ -22,7 +22,7 @@ test_that("MSThermExperiment creation", {
 
 # Perform typical normalization
 spike_in <- "cRAP_ALBU_BOVIN"
-norm.std <- normalize_to_std(expt, spike_in, plot=F)
+norm.std <- normalize_to_std(expt, spike_in, plot=T)
 
 prof <- c(50.0, 50.5, 47.5, 42.0, 37.0, 25.0, 16.0, 11.5, 10.5, 10.0)
 norm.prf <- expt
@@ -51,7 +51,7 @@ test_that("MSThermExperiment normalization", {
 })
 
 # Perform typical modeling
-res0 <- model_experiment(norm.std, bootstrap=F, smooth=T, min_rep_psm=0, np=2, check_missing=F)
+res0 <- model_experiment(norm.std, bootstrap=T, smooth=T, min_rep_psm=0, np=2, check_missing=F)
 res1 <- model_experiment(norm.std, bootstrap=F, smooth=T, min_rep_psm=0, np=2, check_missing=T)
 res2 <- model_experiment(norm.std, bootstrap=F, smooth=T, min_rep_psm=3, np=2)
 res3 <- model_experiment(norm.std, bootstrap=F, smooth=F, min_rep_psm=3, np=2)
