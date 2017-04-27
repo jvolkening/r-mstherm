@@ -27,54 +27,47 @@
 
 normalize_to_tm <- function( expt, res ) {
 
-    df.tm <- data.frame(
-        row.names = sapply(res, '[[', "name")
-    )
-    df.r2 <- data.frame(
-        row.names = sapply(res, '[[', "name")
-    )
-
-    repl_lists <- lapply(res, function(d)
-        unique(sapply( d$series, '[[', "name" )))
+    df.tm <- data.frame(row.names = sapply(res, "[[", "name"))
+    df.r2 <- data.frame(row.names = sapply(res, "[[", "name"))
+    repl_lists <- lapply(res, function(d) unique(sapply(d$series, 
+        "[[", "name")))
     repl_names <- unique(unlist(repl_lists))
     repl_names <- repl_names[order(repl_names)]
-
     for (r in repl_names) {
-        #x <- x[1]$series[[r]][['x']]
-
         s <- sapply(res, function(v) v$series[[r]][["tm"]])
         s[sapply(s, is.null)] <- NA
-        df.tm[[paste0(r,'.',"tm")]]  <- unlist(s, use.names=F)
-
+        df.tm[[paste0(r, ".", "tm")]] <- unlist(s, use.names = F)
         s <- sapply(res, function(v) v$series[[r]][["r2"]])
         s[sapply(s, is.null)] <- NA
-        df.r2[[paste0(r,'.',"r2")]]  <- unlist(s, use.names=F)
+        df.r2[[paste0(r, ".", "r2")]] <- unlist(s, use.names = F)
     }
-
-    min.r2 <- apply(df.r2,1,min)
-    df.tm <- df.tm[min.r2 > .98 & ! is.na(min.r2),]
-    
-    # determine baseline replicate
+    min.r2 <- apply(df.r2, 1, min)
+    df.tm <- df.tm[min.r2 > 0.98 & !is.na(min.r2), ]
     if (length(repl_names) < 3) {
         baseline <- repl_names[1]
     }
     else {
-        meds <- apply(df.tm,1,median)
+        meds <- apply(df.tm, 1, median)
         diffsums = c()
         c <- 1
         for (r in repl_names) {
-            diffsums[c] <- sum(abs(df.tm[,c]-meds))
+            diffsums[c] <- sum(abs(df.tm[, c] - meds))
             c <- c + 1
         }
         baseline <- repl_names[which.min(diffsums)]
     }
-    tm.b <- as.vector(sapply(res, function(v) v$series[[baseline]][['tm']]))
-    sample_names <- sapply(expt$samples, '[[', "name")
+    print(baseline)
+    tm.b <- sapply(res, function(v) v$series[[baseline]][["tm"]])
+    tm.b[sapply(tm.b, is.null)] <- NA
+    tm.b <- unlist(tm.b)
+    sample_names <- sapply(expt$samples, "[[", "name")
     for (r in repl_names) {
         if (r == baseline) {
             next
         }
-        tm.u <- as.vector(sapply(res, function(v) v$series[[r]][['tm']]))
+        tm.u <- sapply(res, function(v) v$series[[r]][["tm"]])
+        tm.u[sapply(tm.u, is.null)] <- NA
+        tm.u <- unlist(tm.u)
         l <- lm(tm.b ~ tm.u)
 
         for (s in sample_names) {
@@ -85,10 +78,8 @@ normalize_to_tm <- function( expt, res ) {
                 }
             }
         }
-
     }
-
-    return( expt )
+    return(expt)
 
 }
 
