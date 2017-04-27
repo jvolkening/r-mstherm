@@ -14,11 +14,15 @@ for normalization, visualization, exploratory analysis, and data export.
 Installation
 ------------
 
-In Linux, do:
+The following command in R will installed the latest CRAN release:
 
-    git clone https://github.com/jvolkening/r-MSTherm.git
-    cd r-MSTherm
-    R CMD INSTALL
+    install.packages("mstherm")
+
+To install the latest commit to `master`, in Linux run:
+
+    git clone https://github.com/jvolkening/r-mstherm.git
+    cd r-mstherm
+    R CMD INSTALL .
 
 You may need to install some prerequisites first depending on your environment
 -- the installer will notify you of this.
