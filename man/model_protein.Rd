@@ -7,8 +7,8 @@
 model_protein(expt, protein, min_rep_psm = 0, min_smp_psm = 0,
   min_tot_psm = 0, max_inf = 1, min_score, max_score, smooth = 0,
   method = "sum", method.denom = "near", trim = 0, bootstrap = 0,
-  min_bs_psms = 8, annot_sep = "|", max_slope = 0, min_r2 = 0,
-  min_reps = 0, only_modeled = 0, check_missing = 0,
+  min_bs_psms = 8, merge_reps = 0, annot_sep = "|", max_slope = 0,
+  min_r2 = 0, min_reps = 0, only_modeled = 0, check_missing = 0,
   missing_cutoff = 0.3)
 }
 \arguments{
@@ -48,6 +48,9 @@ intervals (slow)}
 
 \item{min_bs_psms}{Minimum number of spectral matches required to perform
 bootstrapping}
+
+\item{merge_reps}{Treat replicates as overlapping temperature series and
+and merge into single series (EXPERIMENTAL!)}
 
 \item{annot_sep}{Symbol used to separate protein group IDs (used for
 retrieval of annotations) (default: '|')}
