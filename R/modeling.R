@@ -20,6 +20,8 @@
 #'   spectrum in protein-level quantification
 #' @param max_score maximum score allowed to include a
 #'   spectrum in protein-level quantification
+#' @param min_first_temp minimum temperature for first point in a series in
+#'   order to accept model
 #' @param only_modeled (t/F) Only consider modeled proteins
 #' @param check_missing (t/F) Run simple test to filter out PSMs with missing
 #'   quantification channels where values are expected
@@ -51,12 +53,11 @@
 #'     }
 #' Valid denominator methods include:
 #'     \describe{
-#'        \item{"first"}{Use the first value (lowest temperature point)
-#'          (default)}
+#'        \item{"near"}{Use the median of all values greater than 80% of
+#'          the first value (default)}
+#'        \item{"first"}{Use the first value (lowest temperature point)}
 #'        \item{"max"}{Use the maximum value}
 #'        \item{"top3"}{Use the mean of the three highest values}
-#'        \item{"near"}{Use the median of all values greater than 80% of
-#'          the first value}
 #'     }
 #'
 #' @return MSThermResult object
@@ -92,7 +93,8 @@ model_protein <- function( expt, protein,
   min_reps     = 0,
   only_modeled = 0,
   check_missing = 0,
-  missing_cutoff = 0.3
+  missing_cutoff = 0.3,
+  min_first_temp = 0
 ) {
 
     self <- structure(
@@ -127,10 +129,12 @@ model_protein <- function( expt, protein,
 
         # Track combined data for using "merge_reps"
         merged_profiles <- c()
-        merged_temps   <- c()
-        merged_splits  <- c(0)
-        merged_psms    <- 0
-        n_reps         <- 0
+        merged_temps    <- c()
+        merged_splits   <- c(0)
+        merged_sum      <- 0
+        merged_inf      <- 0
+        merged_psms     <- 0
+        n_reps          <- 0
 
         # Process each replicate
         for (i_replicate in 1:n_replicates) {
@@ -198,75 +202,82 @@ model_protein <- function( expt, protein,
 
             profile <- gen_profile(quant,method,method.denom=method.denom)
 
+            # calculate weighted co-inf
+            sums <- apply(quant, 1, sum)
+            inf  <- sum(sub$coelute_inf * sums) / sum(sums)
+
             # Updated merged variables for use with merge_reps
             merged_profiles <- c(merged_profiles,profile)
             merged_temps    <- c(merged_temps,temps)
             merged_splits   <- c(merged_splits, length(merged_temps))
             merged_psms     <- merged_psms + n_psms
+            merged_inf      <- merged_inf + sum(sums)*inf
+            merged_sum      <- merged_sum + sum(sums)
 
-            fit <- try_fit(profile, temps, trim=trim, smooth=smooth)
-            fit$is.fitted <- !is.null(fit)
+            if (! merge_reps) {
 
-            # calculate weighted co-inf
-            sums       <- apply(quant, 1, sum)
-            fit$inf    <- sum(sub$coelute_inf * sums) / sum(sums)
+                fit <- try_fit(profile, temps, trim=trim, smooth=smooth)
+                fit$is.fitted <- !is.null(fit)
 
-            # keep track of other data for later use
-            fit$psm    <- n_psms
-            fit$name   <- replicate$name
-            fit$sample <- sample$name
-            fit$x      <- temps
-            fit$y      <- profile
+                # keep track of other data for later use
+                fit$inf    <- inf
+                fit$psm    <- n_psms
+                fit$name   <- replicate$name
+                fit$sample <- sample$name
+                fit$x      <- temps
+                fit$y      <- profile
 
-            if (fit$is.fitted) {
+                if (fit$is.fitted) {
 
-                #bootstrap if asked
-                bs <- c()
-                iterations <- 20
-                bs.ratios <- matrix(nrow=iterations,ncol=length(profile))
-                fit.count <- 0
-                if (bootstrap & nrow(quant) >= min_bs_psms) { 
-                    for (i in 1:iterations) {
-                        
-                        quant.bs <- quant[sample(nrow(quant),nrow(quant),replace=T),]
-                        profile.bs <- gen_profile(quant.bs,method,method.denom=method.denom)
-                        bs.ratios[i,] <- profile.bs
-                        fit.bs <- try_fit(profile.bs,temps,trim,smooth)
-                        is.fitted <- !is.null(fit.bs)
-                        if (is.fitted) {
-                            bs[i] <- fit.bs$tm
-                            fit.count <- fit.count + 1
+                    #bootstrap if asked
+                    bs <- c()
+                    iterations <- 20
+                    bs.ratios <- matrix(nrow=iterations,ncol=length(profile))
+                    fit.count <- 0
+                    if (bootstrap & nrow(quant) >= min_bs_psms) { 
+                        for (i in 1:iterations) {
+                            
+                            quant.bs <- quant[sample(nrow(quant),nrow(quant),replace=T),]
+                            profile.bs <- gen_profile(quant.bs,method,method.denom=method.denom)
+                            bs.ratios[i,] <- profile.bs
+                            fit.bs <- try_fit(profile.bs,temps,trim,smooth)
+                            is.fitted <- !is.null(fit.bs)
+                            if (is.fitted) {
+                                bs[i] <- fit.bs$tm
+                                fit.count <- fit.count + 1
+                            }
+                        }
+                        fit$bs.lowers <- apply(bs.ratios,2,function(x) quantile(x,0.025))
+                        fit$bs.uppers <- apply(bs.ratios,2,function(x) quantile(x,0.975))
+                        if (fit.count > iterations * 0.8) {
+                            fit$tm_CI <- quantile(bs,c(0.025,0.975),na.rm=T)
                         }
                     }
-                    fit$bs.lowers <- apply(bs.ratios,2,function(x) quantile(x,0.025))
-                    fit$bs.uppers <- apply(bs.ratios,2,function(x) quantile(x,0.975))
-                    if (fit.count > iterations * 0.8) {
-                        fit$tm_CI <- quantile(bs,c(0.025,0.975),na.rm=T)
+                    if (fit$r2 < min_r2) {
+                        next;
                     }
+                    if (fit$slope > max_slope) {
+                        next;
+                    }
+                    n_reps = n_reps + 1
+
                 }
-                if (fit$r2 < min_r2) {
-                    next;
+
+                # If unfitted, these variables still need to be set but should be NA
+                else {
+                    if (only_modeled) {
+                        next
+                    }
+                    fit$tm    <- NA
+                    fit$slope <- NA
+                    fit$k     <- NA
+                    fit$plat  <- NA
+                    fit$r2    <- NA
                 }
-                if (fit$slope > max_slope) {
-                    next;
-                }
-                n_reps = n_reps + 1
+
+                self$series[[replicate$name]] <- fit
 
             }
-
-            # If unfitted, these variables still need to be set but should be NA
-            else {
-                if (only_modeled) {
-                    next;
-                }
-                fit$tm    <- NA
-                fit$slope <- NA
-                fit$k     <- NA
-                fit$plat  <- NA
-                fit$r2    <- NA
-            }
-
-            self$series[[replicate$name]] <- fit
         }
 
         # Filter on total PSMs for sample
@@ -327,8 +338,27 @@ model_protein <- function( expt, protein,
             fit$sample   <- sample$name
             fit$x        <- merged_temps
             fit$y        <- merged_profiles
+            fit$inf      <- merged_inf/merged_sum
+
+            if (merged_temps[1] > min_first_temp) {
+                fit$is.fitted <- 0
+            }
+
+            if (fit$is.fitted) {
+
+                if (fit$r2 < min_r2) {
+                    fit$is.fitted <- 0
+                }
+                if (fit$slope > max_slope) {
+                    fit$is.fitted <- 0
+                }
+
+            }
 
             if (! fit$is.fitted) {
+                if (only_modeled) {
+                    next
+                }
                 fit$tm    <- NA
                 fit$slope <- NA
                 fit$k     <- NA
