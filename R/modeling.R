@@ -20,7 +20,7 @@
 #'   spectrum in protein-level quantification
 #' @param max_score maximum score allowed to include a
 #'   spectrum in protein-level quantification
-#' @param min_first_temp minimum temperature for first point in a series in
+#' @param max_first_temp minimum temperature for first point in a series in
 #'   order to accept model
 #' @param only_modeled (t/F) Only consider modeled proteins
 #' @param check_missing (t/F) Run simple test to filter out PSMs with missing
@@ -94,7 +94,7 @@ model_protein <- function( expt, protein,
   only_modeled = 0,
   check_missing = 0,
   missing_cutoff = 0.3,
-  min_first_temp = 0
+  max_first_temp = 0
 ) {
 
     self <- structure(
@@ -340,7 +340,7 @@ model_protein <- function( expt, protein,
             fit$y        <- merged_profiles
             fit$inf      <- merged_inf/merged_sum
 
-            if (merged_temps[1] > min_first_temp) {
+            if (merged_temps[1] > max_first_temp) {
                 fit$is.fitted <- 0
             }
 
