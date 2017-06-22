@@ -70,7 +70,7 @@ quantification channels where values are expected}
 \item{missing_cutoff}{Minimum fraction relative to surrounding data points
 used in the check for missing channels}
 
-\item{max_first_temp}{minimum temperature for first point in a series in
+\item{max_first_temp}{maximum temperature for first point in a series in
 order to accept model}
 }
 \value{

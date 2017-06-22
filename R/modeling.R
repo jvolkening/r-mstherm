@@ -20,7 +20,7 @@
 #'   spectrum in protein-level quantification
 #' @param max_score maximum score allowed to include a
 #'   spectrum in protein-level quantification
-#' @param max_first_temp minimum temperature for first point in a series in
+#' @param max_first_temp maximum temperature for first point in a series in
 #'   order to accept model
 #' @param only_modeled (t/F) Only consider modeled proteins
 #' @param check_missing (t/F) Run simple test to filter out PSMs with missing
