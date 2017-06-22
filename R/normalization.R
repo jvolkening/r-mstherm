@@ -114,7 +114,8 @@ normalize_to_tm <- function( expt, res ) {
 normalize_to_std <- function(
     expt,
     protein,
-    ...
+    model=T,
+    plot=T
 ) {
 
     n_replicates <- length(unlist(lapply(expt$samples,
@@ -136,7 +137,7 @@ normalize_to_std <- function(
             
             replicate <- sample$replicates[[i_replicate]]
             expt$samples[[i_sample]]$replicates[[i_replicate]]$data <-
-                norm_to_std(replicate,protein,...)
+                norm_to_std(replicate,protein,model,plot)
 
         }
 
