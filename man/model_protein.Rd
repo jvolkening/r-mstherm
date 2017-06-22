@@ -9,7 +9,7 @@ model_protein(expt, protein, min_rep_psm = 0, min_smp_psm = 0,
   method = "sum", method.denom = "near", trim = 0, bootstrap = 0,
   min_bs_psms = 8, merge_reps = 0, annot_sep = "|", max_slope = 0,
   min_r2 = 0, min_reps = 0, only_modeled = 0, check_missing = 0,
-  missing_cutoff = 0.3, min_first_temp = 0)
+  missing_cutoff = 0.3, max_first_temp = 0)
 }
 \arguments{
 \item{expt}{An MSThermExperiment object}
@@ -70,7 +70,7 @@ quantification channels where values are expected}
 \item{missing_cutoff}{Minimum fraction relative to surrounding data points
 used in the check for missing channels}
 
-\item{min_first_temp}{minimum temperature for first point in a series in
+\item{max_first_temp}{minimum temperature for first point in a series in
 order to accept model}
 }
 \value{
