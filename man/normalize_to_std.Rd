@@ -4,7 +4,7 @@
 \alias{normalize_to_std}
 \title{Normalize to a spike-in standard.}
 \usage{
-normalize_to_std(expt, protein, model = T, plot = T)
+normalize_to_std(expt, protein, ...)
 }
 \arguments{
 \item{expt}{an MSThermExperiment object}

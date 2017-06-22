@@ -9,7 +9,7 @@ model_protein(expt, protein, min_rep_psm = 0, min_smp_psm = 0,
   method = "sum", method.denom = "near", trim = 0, bootstrap = 0,
   min_bs_psms = 8, merge_reps = 0, annot_sep = "|", max_slope = 0,
   min_r2 = 0, min_reps = 0, only_modeled = 0, check_missing = 0,
-  missing_cutoff = 0.3)
+  missing_cutoff = 0.3, min_first_temp = 0)
 }
 \arguments{
 \item{expt}{An MSThermExperiment object}
@@ -69,6 +69,9 @@ quantification channels where values are expected}
 
 \item{missing_cutoff}{Minimum fraction relative to surrounding data points
 used in the check for missing channels}
+
+\item{min_first_temp}{minimum temperature for first point in a series in
+order to accept model}
 }
 \value{
 MSThermResult object
@@ -89,12 +92,11 @@ Valid quantification methods include:
     }
 Valid denominator methods include:
     \describe{
-       \item{"first"}{Use the first value (lowest temperature point)
-         (default)}
+       \item{"near"}{Use the median of all values greater than 80% of
+         the first value (default)}
+       \item{"first"}{Use the first value (lowest temperature point)}
        \item{"max"}{Use the maximum value}
        \item{"top3"}{Use the mean of the three highest values}
-       \item{"near"}{Use the median of all values greater than 80% of
-         the first value}
     }
 }
 \examples{
