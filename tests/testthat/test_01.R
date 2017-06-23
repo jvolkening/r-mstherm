@@ -52,7 +52,7 @@ test_that("MSThermExperiment normalization", {
 
 # Perform typical modeling
 res0 <- model_experiment(norm.std, bootstrap=F, smooth=T, min_rep_psm=0, np=2, check_missing=F)
-res1 <- model_experiment(norm.std, bootstrap=F, smooth=T, min_rep_psm=0, np=2, check_missing=T)
+res1 <- model_experiment(norm.std, bootstrap=F, smooth=T, min_rep_psm=0, np=2, check_missing=T, missing_cutoff=0.2)
 res2 <- model_experiment(norm.std, bootstrap=F, smooth=T, min_rep_psm=3, np=2)
 res3 <- model_experiment(norm.std, bootstrap=T, smooth=F, min_rep_psm=3, np=2)
 sgl0 <- res0$P38707
@@ -76,26 +76,26 @@ test_that("MSThermExperiment modeling", {
     expect_match(sgl1$annotation, "Asparagine--tRNA ligase, cytoplasmic")
     expect_true(sgl1$series$C1$is.fitted)
 
-    expect_equal(sgl1$series$C1$tm,    48.0,   tolerance=0.1)
-    expect_equal(sgl1$series$C1$k,    842,     tolerance=2)
-    expect_equal(sgl1$series$C1$plat,   0.06,  tolerance=0.01)
-    expect_equal(sgl1$series$C1$slope, -0.090, tolerance=0.001)
+    expect_equal(sgl1$series$C1$tm,    47.0,   tolerance=0.1)
+    expect_equal(sgl1$series$C1$k,    849,     tolerance=2)
+    expect_equal(sgl1$series$C1$plat,   0.05,  tolerance=0.01)
+    expect_equal(sgl1$series$C1$slope, -0.091, tolerance=0.001)
     expect_equal(sgl1$series$C1$r2,     0.99,  tolerance=0.01)
     expect_equal(sgl1$series$C1$rmsd,   0.03,  tolerance=0.01)
     expect_equal(sgl1$series$C1$inf,    0.16,  tolerance=0.01)
 
     #  missing value check should remove one PSM
     expect_equal(sgl0$series$C1$psm,   46,     tolerance=0.01)
-    expect_equal(sgl1$series$C1$psm,   45,     tolerance=0.01)
+    expect_equal(sgl1$series$C1$psm,   40,     tolerance=0.01)
 
-    expect_equal(sgl1$series$T1$tm,    52.1,   tolerance=0.1)
+    expect_equal(sgl1$series$T1$tm,    52.0,   tolerance=0.1)
     expect_equal(sgl1$series$T1$k,    988,     tolerance=2)
     expect_equal(sgl1$series$T1$plat,   0.02,  tolerance=0.01)
     expect_equal(sgl1$series$T1$slope, -0.090, tolerance=0.001)
     expect_equal(sgl1$series$T1$r2,     0.99,  tolerance=0.01)
     expect_equal(sgl1$series$T1$rmsd,   0.04,  tolerance=0.01)
     expect_equal(sgl1$series$T1$inf,    0.20,  tolerance=0.01)
-    expect_equal(sgl1$series$T1$psm,   92,     tolerance=0.01)
+    expect_equal(sgl1$series$T1$psm,   82,     tolerance=0.01)
 
     # protein that should not have modeled at all
     expect_false(sgl2$series$C1$is.fitted)

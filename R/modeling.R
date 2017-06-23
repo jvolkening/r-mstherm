@@ -93,7 +93,7 @@ model_protein <- function( expt, protein,
   min_reps     = 0,
   only_modeled = 0,
   check_missing = 0,
-  missing_cutoff = 0.3,
+  missing_cutoff = 0.5,
   max_first_temp = 0
 ) {
 
@@ -622,20 +622,23 @@ sigmoid.d1 <- function(p,k,m,x) {
 }
 
 # look for probable missing values
-is_consistent <- function(v,cutoff=0.3) {
+is_consistent <- function(v,cutoff=0.5) {
 
-    len <- length(v)
+    l <- length(v)
+    m <- max(v)
 
-    if (len < 2) {
+    if (l < 2) {
         return(1)
     }
 
-    for (i in 1:(len-1)) {
-        if (i == 1 & (v[i]/v[i+1]) < cutoff) {
+    for (i in 1:(l-1)) {
+        delta_1 <- v[i+1] - v[i]
+        if (i == 1 & (delta_1/m) > cutoff) {
             return(0)
         }
         if (i > 1) {
-            if ((v[i]/v[i-1]) < cutoff & (v[i]/v[i+1]) < cutoff) {
+            delta_2 <- v[i-1] - v[i]
+            if ((delta_1/m) > cutoff & (delta_2/m) > cutoff) {
                 return(0)
             }
         }
