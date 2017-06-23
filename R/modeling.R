@@ -10,6 +10,8 @@
 #'   sample to model protein
 #' @param min_tot_psm Minimum number of spectral matches required across all
 #'   replicates to model protein
+#' @param min_pep Minimum number of unique peptides required across all
+#'   replicates to model protein
 #' @param min_r2 Minimum R2 value to consider model (implies "only_modeled")
 #' @param max_slope Maximum slope to consider model (implies "only_modeled")
 #' @param min_reps Minimum number of modeled replicates for each sample to
@@ -77,6 +79,7 @@ model_protein <- function( expt, protein,
   min_rep_psm  = 0,
   min_smp_psm  = 0,
   min_tot_psm  = 0,
+  min_pep      = 0,
   max_inf      = 1,
   min_score,
   max_score,
@@ -111,6 +114,7 @@ model_protein <- function( expt, protein,
     self$annotation <- gen_description(expt, protein, sep=annot_sep)
 
     psm_tot   <- 0 # track total PSMs for protein
+    pep_tot   <- 0 # track total unique peptides for protein
     n_samples <- length(expt$samples)
 
     if (min_r2 > 0 || max_slope < 0 ) {
@@ -187,9 +191,12 @@ model_protein <- function( expt, protein,
             quant <- quant[ok,]
 
             n_psms  <- nrow(sub)
+            n_peps  <- length(unique(sub$peptide))
+
 
             # Update PSM totals and check cutoffs
             psm_tot <- psm_tot + n_psms
+            pep_tot <- pep_tot + n_peps
             psm_smp <- psm_smp + n_psms
             if (n_psms < min_rep_psm) {
                 next
@@ -376,6 +383,12 @@ model_protein <- function( expt, protein,
     if (psm_tot < min_tot_psm) {
         return( NULL )
     }
+
+    # Do final filtering on total PSMs for protein
+    if (pep_tot < min_pep) {
+        return( NULL )
+    }
+
     # Filter on worst slope
     if (worst_slope > max_slope) {
         return( NULL )

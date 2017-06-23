@@ -5,11 +5,11 @@
 \title{Model single protein.}
 \usage{
 model_protein(expt, protein, min_rep_psm = 0, min_smp_psm = 0,
-  min_tot_psm = 0, max_inf = 1, min_score, max_score, smooth = 0,
-  method = "sum", method.denom = "near", trim = 0, bootstrap = 0,
-  min_bs_psms = 8, merge_reps = 0, annot_sep = "|", max_slope = 0,
-  min_r2 = 0, min_reps = 0, only_modeled = 0, check_missing = 0,
-  missing_cutoff = 0.5, max_first_temp = 0)
+  min_tot_psm = 0, min_pep = 0, max_inf = 1, min_score, max_score,
+  smooth = 0, method = "sum", method.denom = "near", trim = 0,
+  bootstrap = 0, min_bs_psms = 8, merge_reps = 0, annot_sep = "|",
+  max_slope = 0, min_r2 = 0, min_reps = 0, only_modeled = 0,
+  check_missing = 0, missing_cutoff = 0.5, max_first_temp = 0)
 }
 \arguments{
 \item{expt}{An MSThermExperiment object}
@@ -23,6 +23,9 @@ replicate to model protein}
 sample to model protein}
 
 \item{min_tot_psm}{Minimum number of spectral matches required across all
+replicates to model protein}
+
+\item{min_pep}{Minimum number of unique peptides required across all
 replicates to model protein}
 
 \item{max_inf}{Maximum co-isolation interference level allowed to include a
