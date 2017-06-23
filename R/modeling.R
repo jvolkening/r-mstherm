@@ -192,7 +192,8 @@ model_protein <- function( expt, protein,
             psm_tot <- psm_tot + n_psms
             psm_smp <- psm_smp + n_psms
             if (n_psms < min_rep_psm) {
-                return(NULL)
+                next
+                #return(NULL)
             }
 
             # Obviously don't try to model if no rows pass filtering

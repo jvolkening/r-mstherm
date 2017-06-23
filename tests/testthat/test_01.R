@@ -69,8 +69,8 @@ test_that("MSThermExperiment modeling", {
     expect_is(sgl2,  "MSThermResult")
 
     expect_equal(length(res1), 6)
-    expect_equal(length(res2), 5)
-    expect_equal(length(res3), 5)
+    expect_equal(length(res2), 6)
+    expect_equal(length(res3), 6)
 
     # protein that should have modeled well
     expect_match(sgl1$annotation, "Asparagine--tRNA ligase, cytoplasmic")
@@ -124,7 +124,7 @@ res3.df <- as.data.frame(res3)
 
 test_that("MSThermResult export", {
 
-    expect_equal( nrow(res3.df), 5)
+    expect_equal( nrow(res3.df), 6)
     expect_equal( ncol(res3.df), 17)
 
 })
