@@ -15,6 +15,9 @@
 #'
 #' @param expt An MSThermExperiment object
 #' @param res An MSThermResultSet object
+#' @param mode Regression mode
+#' @param min_r2 Minimum R2 for protein to use Tm in regression
+#' @param max_slope Maximum slope for protein to use Tm in regression
 #'
 #' @return An MsThermExperiment object with re-normalized data slots
 #'
@@ -29,10 +32,11 @@
 #'
 #' @export
 
-normalize_to_tm <- function( expt, res ) {
+normalize_to_tm <- function( expt, res, mode=1, min_r2=0.95, max_slope=-0.06 ) {
 
     df.tm <- data.frame(row.names = sapply(res, "[[", "name"))
     df.r2 <- data.frame(row.names = sapply(res, "[[", "name"))
+    df.sl <- data.frame(row.names = sapply(res, "[[", "name"))
     repl_lists <- lapply(res, function(d) unique(sapply(d$series, 
         "[[", "name")))
     repl_names <- unique(unlist(repl_lists))
@@ -40,13 +44,19 @@ normalize_to_tm <- function( expt, res ) {
     for (r in repl_names) {
         s <- sapply(res, function(v) v$series[[r]][["tm"]])
         s[sapply(s, is.null)] <- NA
-        df.tm[[paste0(r, ".", "tm")]] <- unlist(s, use.names = F)
+        df.tm[[r]] <- unlist(s, use.names = F)
         s <- sapply(res, function(v) v$series[[r]][["r2"]])
         s[sapply(s, is.null)] <- NA
-        df.r2[[paste0(r, ".", "r2")]] <- unlist(s, use.names = F)
+        df.r2[[r]] <- unlist(s, use.names = F)
+        s <- sapply(res, function(v) v$series[[r]][["slope"]])
+        s[sapply(s, is.null)] <- NA
+        df.sl[[r]] <- unlist(s, use.names = F)
     }
-    min.r2 <- apply(df.r2, 1, min)
-    df.tm <- df.tm[min.r2 > 0.98 & !is.na(min.r2), ]
+    min.r2  <- apply(df.r2, 1, min)
+    max.sl  <- apply(df.sl, 1, max)
+    df.tm <- df.tm[(min.r2 > min_r2) & !is.na(min.r2) & (max.sl < max_slope) & !is.na(max.sl), ]
+    mean.tm <- apply(df.tm, 1, function(v) mean(v,na.rm=T))
+    print(paste("rows used:",nrow(df.tm)))
     if (length(repl_names) < 3) {
         baseline <- repl_names[1]
     }
@@ -59,26 +69,64 @@ normalize_to_tm <- function( expt, res ) {
             c <- c + 1
         }
         baseline <- repl_names[which.min(diffsums)]
+        print(paste("baseline:",baseline))
     }
-    print(baseline)
-    tm.b <- sapply(res, function(v) v$series[[baseline]][["tm"]])
-    tm.b[sapply(tm.b, is.null)] <- NA
-    tm.b <- unlist(tm.b)
+    #tm.b <- sapply(res, function(v) v$series[[baseline]][["tm"]])
+    #tm.b[sapply(tm.b, is.null)] <- NA
+    #tm.b <- unlist(tm.b)
     sample_names <- sapply(expt$samples, "[[", "name")
+    tm.b <- df.tm[[baseline]]
+
+    if (mode == 3) {
+        tm.b <- tm.b[ mean.tm < quantile(mean.tm, 0.2)
+                   | mean.tm > quantile(mean.tm, 0.8) ]
+        print(paste("final count:",length(tm.b)))
+    }
+
     for (r in repl_names) {
         if (r == baseline) {
             next
         }
-        tm.u <- sapply(res, function(v) v$series[[r]][["tm"]])
-        tm.u[sapply(tm.u, is.null)] <- NA
-        tm.u <- unlist(tm.u)
-        l <- lm(tm.b ~ tm.u)
+        #tm.u <- sapply(res, function(v) v$series[[r]][["tm"]])
+        #tm.u[sapply(tm.u, is.null)] <- NA
+        #tm.u <- unlist(tm.u)
+        tm.u <- df.tm[[r]]
+        if (mode == 3) {
+            tm.u <- tm.u[ mean.tm < quantile(mean.tm, 0.2)
+                    | mean.tm > quantile(mean.tm, 0.8) ]
+        }
+        if (mode == 1 | mode == 3) {
+            print("Mode 1/3 reg")
+            l <- lm(tm.b ~ tm.u)
+            tm.u <- tm.u * l$coefficients[2] + l$coefficients[1]
+            l2 <- lm(tm.b ~ tm.u)
+        }
+        else if (mode == 2) {
+            print("Mode 2 reg")
+            l <- lm(tm.u ~ tm.b)
+            tm.u <- (tm.u - l$coefficients[1]) / l$coefficients[2]
+            l2 <- lm(tm.u ~ tm.b)
+        }
+        else {
+            print("bad mode")
+            return(expt)
+        }
+        print(paste(l$coefficients[2],l$coefficients[1]))
+        print(paste(l2$coefficients[2],l2$coefficients[1]))
+        print("------")
 
         for (s in sample_names) {
             r_names <- sapply(expt$samples[[s]]$replicates, '[[', "name")
             for (r2 in r_names) {
                 if (r2 == r) {
-                    expt$samples[[s]]$replicates[[r]]$meta$temp <- expt$samples[[s]]$replicates[[r]]$meta$temp * l$coefficients[2] + l$coefficients[1]
+                    if (mode == 1 | mode == 3) {
+                        print("Mode 1/3 norm")
+                        expt$samples[[s]]$replicates[[r]]$meta$temp <- expt$samples[[s]]$replicates[[r]]$meta$temp * l$coefficients[2] + l$coefficients[1]
+                    }
+                    else if (mode == 2) {
+                        print("Mode 2 norm")
+                        expt$samples[[s]]$replicates[[r]]$meta$temp <- (expt$samples[[s]]$replicates[[r]]$meta$temp - l$coefficients[1]) / l$coefficients[2]
+                    }
                 }
             }
         }
