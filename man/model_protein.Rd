@@ -9,7 +9,8 @@ model_protein(expt, protein, min_rep_psm = 0, min_smp_psm = 0,
   smooth = 0, method = "sum", method.denom = "near", trim = 0,
   bootstrap = 0, min_bs_psms = 8, merge_reps = 0, annot_sep = "|",
   max_slope = 0, min_r2 = 0, min_reps = 0, only_modeled = 0,
-  check_missing = 0, missing_cutoff = 0.5, max_first_temp = 0)
+  check_missing = 0, missing_cutoff = 0.5, max_first_temp = 0,
+  anchor = 0)
 }
 \arguments{
 \item{expt}{An MSThermExperiment object}
@@ -46,7 +47,7 @@ spectrum in protein-level quantification}
 
 \item{trim}{(t/F) Trim all lower data points less than the abundance maximum}
 
-\item{bootstrap}{(T/F) Perform bootstrap analysis to determine confidence
+\item{bootstrap}{(t/F) Perform bootstrap analysis to determine confidence
 intervals (slow)}
 
 \item{min_bs_psms}{Minimum number of spectral matches required to perform
@@ -75,6 +76,9 @@ used in the check for missing channels}
 
 \item{max_first_temp}{maximum temperature for first point in a series in
 order to accept model}
+
+\item{anchor}{(t/F) Add extra point to left of curve to facilitate modeling
+low Tms}
 }
 \value{
 MSThermResult object

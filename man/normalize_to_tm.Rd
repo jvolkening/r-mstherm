@@ -4,12 +4,18 @@
 \alias{normalize_to_tm}
 \title{Re-normalize based on Tm.}
 \usage{
-normalize_to_tm(expt, res)
+normalize_to_tm(expt, res, mode = 1, min_r2 = 0.95, max_slope = -0.06)
 }
 \arguments{
 \item{expt}{An MSThermExperiment object}
 
 \item{res}{An MSThermResultSet object}
+
+\item{mode}{Regression mode}
+
+\item{min_r2}{Minimum R2 for protein to use Tm in regression}
+
+\item{max_slope}{Maximum slope for protein to use Tm in regression}
 }
 \value{
 An MsThermExperiment object with re-normalized data slots
