@@ -34,7 +34,7 @@
 #' @param method.denom Method used to calculate denominator of abundance
 #'   (see Details)
 #' @param trim (t/F) Trim all lower data points less than the abundance maximum
-#' @param bootstrap (T/F) Perform bootstrap analysis to determine confidence
+#' @param bootstrap (t/F) Perform bootstrap analysis to determine confidence
 #'   intervals (slow)
 #' @param min_bs_psms Minimum number of spectral matches required to perform
 #'   bootstrapping
@@ -42,6 +42,8 @@
 #'   and merge into single series (EXPERIMENTAL!)
 #' @param annot_sep Symbol used to separate protein group IDs (used for
 #'   retrieval of annotations) (default: '|')
+#' @param anchor (t/F) Add extra point to left of curve to facilitate modeling
+#'   low Tms
 #'
 #' @details Valid quantification methods include:
 #'     \describe{
@@ -97,7 +99,8 @@ model_protein <- function( expt, protein,
   only_modeled = 0,
   check_missing = 0,
   missing_cutoff = 0.5,
-  max_first_temp = 0
+  max_first_temp = 0,
+  anchor = 0
 ) {
 
     self <- structure(
@@ -224,7 +227,12 @@ model_protein <- function( expt, protein,
 
             if (! merge_reps) {
 
-                fit <- try_fit(profile, temps, trim=trim, smooth=smooth)
+                if (anchor) {
+                    fit <- try_fit(c(1,profile), c(15,temps), trim=trim, smooth=smooth)
+                }
+                else {
+                    fit <- try_fit(profile, temps, trim=trim, smooth=smooth)
+                }
                 fit$is.fitted <- !is.null(fit)
 
                 # keep track of other data for later use
