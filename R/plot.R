@@ -83,10 +83,10 @@ plot.MSThermResult <- function(
             }
         }
         if (series$is.fitted) {
-            #x <- seq(result$tmin, result$tmax, by=.1)
-            #y <- eval(sigmoid, list(p=result$plat, k=result$k, m=result$tm, x=x))
-            #lines(x,y, col=col[i_sample], lwd=2)
-            #abline(v=series$tm,col=col[i_sample])
+            x.curve <- seq(result$tmin, result$tmax, by=.1)
+            y.curve <- eval(sigmoid, list(p=series$plat, k=series$k, m=series$tm, x=x.curve))
+            lines(x.curve, y.curve, col=col[i_sample], lwd=2)
+            abline(v=series$tm,col=col[i_sample])
         }
 
         #merged_splits <- series$splits
