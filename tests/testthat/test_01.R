@@ -131,7 +131,8 @@ test_that("MSThermResult export", {
 
 # Fake tests (TODO: how to test these properly)?
 
-write.sqlite(res3, "tmp.sqlite")
+#write.sqlite(res3, "tmp.sqlite")
+
 plot(res3)
 summary(sgl1)
 summary(res3)

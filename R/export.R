@@ -149,7 +149,7 @@ write.sqlite <- function( res, file ) {
 
                 df <- data.frame(id=p.id,name=p$name,annot=p$annotation)
                 sql <- "INSERT INTO proteins VALUES (:id, :name, :annot)"
-                rs <-RSQLite::Execute(con, sql, df)
+                rs <-RSQLite::dbExecute(con, sql, df)
 
             }
 
@@ -170,7 +170,7 @@ write.sqlite <- function( res, file ) {
 
                     df <- data.frame(id=x.id,value=I(list(x_blob)))
                     sql <- "INSERT INTO temps VALUES (:id, :value)"
-                    rs <-RSQLite::Execute(con, sql, df)
+                    rs <-RSQLite::dbExecute(con, sql, df)
 
                 }
 
@@ -182,7 +182,7 @@ write.sqlite <- function( res, file ) {
                     
                     df <- data.frame(id=r.id,name=r$name)
                     sql <- "INSERT INTO replicates VALUES (:id, :name)"
-                    rs <-RSQLite::Execute(con, sql, df)
+                    rs <-RSQLite::dbExecute(con, sql, df)
 
                 }
 
@@ -194,7 +194,7 @@ write.sqlite <- function( res, file ) {
 
                     df <- data.frame(id=s.id,name=r$sample)
                     sql <- "INSERT INTO samples VALUES (:id, :name)"
-                    rs <-RSQLite::Execute(con, sql, df)
+                    rs <-RSQLite::dbExecute(con, sql, df)
                 }
 
                 has_pci <- ! is.null(r$bs.lowers)
@@ -224,7 +224,7 @@ write.sqlite <- function( res, file ) {
                     v4  = if(has_tci) r$tm_CI[[2]] else 'NULL'
                 )
                 sql <- "INSERT INTO data VALUES (:pid, :rid, :sid, :tm, :k, :p, :xid, :y, :psm, :inf, :slp, :r2, :v1, :v2, :v3, :v4)"
-                rs <-RSQLite::Execute(con, sql, df)
+                rs <-RSQLite::dbExecute(con, sql, df)
 
             }
         }
