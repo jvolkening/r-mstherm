@@ -255,16 +255,17 @@ norm_to_profile <- function(
     ratios <- sums/sums[1]
 
     if(model) {
-        st.coarse <- expand.grid(p=seq(0,0.4,by=0.1),k=seq(0,2000,by=100),m=seq(20,80,by=5))
         x <- temps[std.ratios < 1.2]
         y <- std.ratios[std.ratios < 1.2]
-        mod <- nls2(y~sigmoid(p,k,m,x),data=list(x=x,y=y),start=st.coarse,algorithm="brute-force",control=nls.control(warnOnly=T,maxiter=50000))
-        fit <- nls2(y~sigmoid(p,k,m,x),data=list(x=x,y=y),start=mod,control=nls.control(warnOnly=F,maxiter=50000),algorithm="port",lower=c(0,1,1),upper=c(0.5,2000,100))
-        p <- coefficients(fit)[['p']]
-        k <- coefficients(fit)[['k']]
-        m <- coefficients(fit)[['m']]
-        yfit <- sigmoid(p,k,m,temps)
 
+        fit <- try_fit(y, x, trim=F, smooth=F)
+
+        if (!is.null(fit)) {
+            model <- 0
+        }
+    }
+    if(model) {
+        yfit <- eval(sigmoid, list(p=fit$plat, k=fit$k, m=fit$tm, x=temps))
         sf <- yfit/ratios
     }
     else {
@@ -280,7 +281,9 @@ norm_to_profile <- function(
         points(temps,std.ratios,col=cols[1])
         points(temps,corrected,col=cols[2])
         if (model) {
-            curve(sigmoid(p,k,m,x),col=cols[2],add=T)
+            x <- seq(min(temps), max(temps), by=.1)
+            y <- eval(sigmoid, list(p=fit$plat, k=fit$k, m=fit$tm, x=x))
+            lines(x,y,col=cols[2])
         }
 
     }
@@ -319,17 +322,20 @@ norm_to_std <- function(
 
     corrected <- ratios/std.ratios
 
+    fit <- list()
+
     if (model) {
-        st.coarse <- expand.grid(p=seq(0,0.4,by=0.1),k=seq(0,2000,by=100),m=seq(20,80,by=5))
         x <- temps[corrected < 1.2]
         y <- corrected[corrected < 1.2]
-        mod <- nls2(y~sigmoid(p,k,m,x),data=list(x=x,y=y),start=st.coarse,algorithm="brute-force",control=nls.control(warnOnly=T,maxiter=50000))
-        fit <- nls2(y~sigmoid(p,k,m,x),data=list(x=x,y=y),start=mod,control=nls.control(warnOnly=F,maxiter=50000),algorithm="port",lower=c(0,1,1),upper=c(0.5,2000,100))
-        p <- coefficients(fit)[['p']]
-        k <- coefficients(fit)[['k']]
-        m <- coefficients(fit)[['m']]
-        yfit <- sigmoid(p,k,m,temps)
 
+        fit <- try_fit(y, x, trim=F, smooth=F)
+
+        if (!is.null(fit)) {
+            model <- 0
+        }
+    }
+    if (model) {
+        yfit <- eval(sigmoid, list(p=fit$plat, k=fit$k, m=fit$tm, x=temps))
         sf <- yfit/ratios
     }
     else {
@@ -354,7 +360,9 @@ norm_to_std <- function(
         }
         points(temps,corrected,col=cols[2])
         if (model) {
-            curve(sigmoid(p,k,m,x),col=cols[2],add=T)
+            x <- seq(min(temps), max(temps), by=.1)
+            y <- eval(sigmoid, list(p=fit$plat, k=fit$k, m=fit$tm, x=x))
+            lines(x,y,col=cols[2])
         }
 
     }

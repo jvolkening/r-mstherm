@@ -1,3 +1,8 @@
+# This is our model
+
+sigmoid    <- expression( (1-p)/(1+exp(-k*(1/x-1/m)))+p )
+sigmoid.d1 <- expression( -((1 - p) * (exp(-k * (1/x - 1/m)) * (k * (1/x^2)))/(1 + exp(-k * (1/x - 1/m)))^2) )
+
 #' @title Model single protein.
 #'
 #' @description Model a single protein from an MSThermExperiment object.
@@ -601,19 +606,22 @@ try_fit <- function(ratios,temps,trim,smooth) {
 
     fit <- list()
 
+    sigmoid.formula    <- as.formula(paste("y ~ ", sigmoid))
+    sigmoid.d1.formula <- as.formula(paste("y ~ ", sigmoid.d1))
+
     st.coarse <- expand.grid(p=c(0,0.3),k=seq(0,4000,by=1000),m=seq(30,60,by=15))
     st.fine   <- expand.grid(p=c(0,0.3),k=seq(0,8000,by=200),m=seq(30,80,by=10))
     for (st in list(st.coarse,st.fine)) {
         tryCatch( {
-            mod <- nls2(y~sigmoid(p,k,m,x),data=list(x=x,y=y),start=st,algorithm="brute-force",control=nls.control(warnOnly=T,maxiter=5000))
-            fit <-
-            nls2(y~sigmoid(p,k,m,x),data=list(x=x,y=y),start=mod,control=nls.control(warnOnly=F),algorithm="port",lower=c(0,1,10),upper=c(0.4,100000,100))
+            mod <- nls2(sigmoid.formula,data=list(x=x,y=y),start=st,algorithm="brute-force",control=nls.control(warnOnly=T,maxiter=5000))
+            fit <- nls2(sigmoid.formula,data=list(x=x,y=y),start=mod,control=nls.control(warnOnly=F),algorithm="port",lower=c(0,1,10),upper=c(0.4,100000,100))
             obj <- list()
-            obj$plat  <- as.numeric(coefficients(fit)[1])
-            obj$k     <- as.numeric(coefficients(fit)[2])
-            obj$tm    <- as.numeric(coefficients(fit)[3])
-            obj$slope <- as.numeric(sigmoid.d1(obj$plat,obj$k,obj$tm,obj$tm))
-            y.fit <- sigmoid(obj$plat,obj$k,obj$tm,temps)
+            coeff <- coefficients(fit)
+            obj$plat  <- coeff[['p']]
+            obj$k     <- coeff[['k']]
+            obj$tm    <- coeff[['m']]
+            obj$slope <- eval(sigmoid.d1, c(coeff,list(x=coeff[['m']])))
+            y.fit     <- eval(sigmoid, c(coeff,list(x=temps)))
             obj$y.fit <- y.fit
             obj$resid <- ratios - y.fit
             obj$r2 <- 1-(sum(obj$resid^2)/(length(ratios)*var(ratios)))
@@ -625,23 +633,6 @@ try_fit <- function(ratios,temps,trim,smooth) {
 
 }
 
-
-
-# The model
-sigmoid <- function(p,k,m,x) {
-
-    (1-p)/(1+exp(-k*(1/x-1/m)))+p
-
-}
-
-
-
-# first derivative
-sigmoid.d1 <- function(p,k,m,x) {
-
-    -((1 - p) * (exp(-k * (1/x - 1/m)) * (k * (1/x^2)))/(1 + exp(-k * (1/x - 1/m)))^2)
-
-}
 
 # look for probable missing values
 is_consistent <- function(v,cutoff=0.5) {

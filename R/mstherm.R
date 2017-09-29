@@ -8,7 +8,7 @@
 #' @docType package
 #'
 #' @importFrom stats coefficients density dnorm loess mad median nls.control
-#'  p.adjust pnorm quantile var lm
+#'  p.adjust pnorm quantile var lm as.formula
 #' @importFrom graphics par plot points rect mtext lines curve legend arrows
 #'  abline
 #' @importFrom utils read.delim txtProgressBar setTxtProgressBar
