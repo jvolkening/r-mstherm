@@ -5,7 +5,7 @@
 \title{Plot MSThermResult object.}
 \usage{
 \method{plot}{MSThermResult}(x, table = T, col, CI.points = T, CI.Tm = T,
-  ...)
+  header = T, ...)
 }
 \arguments{
 \item{x}{An MSThermResult object}
@@ -17,6 +17,8 @@
 \item{CI.points}{(T/F) plot temperature point confidence intervals}
 
 \item{CI.Tm}{(T/F) plot Tm confidence intervals}
+
+\item{header}{(T/F) show plot title (protein ID and annotation)}
 
 \item{...}{other parameters passed through to plot()}
 }

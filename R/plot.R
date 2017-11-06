@@ -7,6 +7,7 @@
 #' @param col array of colors used to plot samples
 #' @param CI.points (T/F) plot temperature point confidence intervals
 #' @param CI.Tm (T/F) plot Tm confidence intervals
+#' @param header (T/F) show plot title (protein ID and annotation)
 #' @param ... other parameters passed through to plot()
 #'
 #' @return Nothing
@@ -32,6 +33,7 @@ plot.MSThermResult <- function(
     col,
     CI.points=T,
     CI.Tm=T,
+    header=T,
     ...
     ) {
 
@@ -52,14 +54,21 @@ plot.MSThermResult <- function(
     colors2 <- paste0(col,"99");
     colors3 <- paste0(col,"33");
 
-    par(mgp = c(2.2, 0.7, 0))
-    par(mar = c(4, 4, 3.5, 3.5))
+    #par(mgp = c(2.2, 0.7, 0))
+    #par(mar = c(4, 4, 3.5, 3.5))
+    if (header) {
+        title = result$name
+    }
+    else {
+        title = NA
+    }
+
     def_args <- list(
         x    = 0,
         y    = 0,
         xlim = c(result$tmin,result$tmax),
         ylim = c(0,1.3),
-        main = result$name,
+        main = title,
         xlab=expression(temperature~(degree*C)),
         ylab="relative soluble fraction"
     )
@@ -67,7 +76,9 @@ plot.MSThermResult <- function(
     do.call("plot",
         c(passed,def_args[!names(def_args) %in% names(passed)])
     )
-    mtext(result$annotation)
+    if (header) {
+        mtext(result$annotation)
+    }
 
     for (i_series in 1:length(result$series)) {
         
