@@ -122,7 +122,6 @@ model_protein <- function( expt, protein,
     self$annotation <- gen_description(expt, protein, sep=annot_sep)
 
     psm_tot   <- 0 # track total PSMs for protein
-    pep_tot   <- 0 # track total unique peptides for protein
     n_samples <- length(expt$samples)
 
     if (min_r2 > 0 || max_slope < 0 ) {
@@ -146,6 +145,7 @@ model_protein <- function( expt, protein,
         merged_sum      <- 0
         merged_inf      <- 0
         merged_psms     <- 0
+        merged_n_peps   <- NULL
         n_reps          <- 0
 
         # Process each replicate
@@ -201,12 +201,18 @@ model_protein <- function( expt, protein,
             n_psms  <- nrow(sub)
             n_peps  <- length(unique(sub$peptide))
 
+            # Count non-redundant peptide lengths (exclude peptides that are
+            # substsrings of others
+            pep_seqs <- paste0(unique(sub$peptide),collapse=',')
 
             # Update PSM totals and check cutoffs
             psm_tot <- psm_tot + n_psms
-            pep_tot <- pep_tot + n_peps
             psm_smp <- psm_smp + n_psms
             if (n_psms < min_rep_psm) {
+                next
+                #return(NULL)
+            }
+            if (n_peps < min_pep) {
                 next
                 #return(NULL)
             }
@@ -229,6 +235,12 @@ model_protein <- function( expt, protein,
             merged_psms     <- merged_psms + n_psms
             merged_inf      <- merged_inf + sum(sums)*inf
             merged_sum      <- merged_sum + sum(sums)
+            if (is.null(merged_n_peps)) {
+                merged_n_peps   <- n_peps
+            }
+            else {
+                merged_n_peps <- min(merged_n_peps, n_peps)
+            }
 
             if (! merge_reps) {
 
@@ -241,12 +253,14 @@ model_protein <- function( expt, protein,
                 fit$is.fitted <- !is.null(fit)
 
                 # keep track of other data for later use
-                fit$inf    <- inf
-                fit$psm    <- n_psms
-                fit$name   <- replicate$name
-                fit$sample <- sample$name
-                fit$x      <- temps
-                fit$y      <- profile
+                fit$inf      <- inf
+                fit$psm      <- n_psms
+                fit$name     <- replicate$name
+                fit$sample   <- sample$name
+                fit$x        <- temps
+                fit$y        <- profile
+                fit$n_peps   <- n_peps
+                fit$pep_seqs <- pep_seqs
 
                 if (fit$is.fitted) {
 
@@ -360,6 +374,7 @@ model_protein <- function( expt, protein,
             fit$x        <- merged_temps
             fit$y        <- merged_profiles
             fit$inf      <- merged_inf/merged_sum
+            fit_n_peps   <- merged_n_peps
 
             if (merged_temps[1] > max_first_temp) {
                 fit$is.fitted <- 0
@@ -394,11 +409,6 @@ model_protein <- function( expt, protein,
 
     # Do final filtering on total PSMs for protein
     if (psm_tot < min_tot_psm) {
-        return( NULL )
-    }
-
-    # Do final filtering on total PSMs for protein
-    if (pep_tot < min_pep) {
         return( NULL )
     }
 
