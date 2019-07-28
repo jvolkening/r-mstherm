@@ -4,6 +4,8 @@
 #' one row per protein/group
 #'
 #' @param x an MSResultSet object
+#' @param include_raw (t/F) include columns with raw channel data in output
+#'   (currently not compatible with series-merged results)
 #' @param ... additional arguments passed to or from other functions
 #'
 #' @return A data frame populated with relevant information per result
@@ -19,7 +21,7 @@
 #'
 #' @export
 
-as.data.frame.MSThermResultSet <- function( x, ... ) {
+as.data.frame.MSThermResultSet <- function( x, include_raw=F, ... ) {
 
     df <- data.frame(
         row.names = sapply(x, '[[', "name")
@@ -34,10 +36,25 @@ as.data.frame.MSThermResultSet <- function( x, ... ) {
     for (r in repl_names) {
         #x <- x[1]$series[[r]][['x']]
 
-        for(col in c("tm","psm","inf","slope","k","plat","r2","rmsd")) {
+        for(col in c("n_peps","pep_seqs","tm","psm","inf","slope","k","plat","r2","rmsd")) {
             s <- sapply(x, function(v) v$series[[r]][[col]])
             s[sapply(s, is.null)] <- NA
             df[[paste0(r,'.',col)]]  <- unlist(s, use.names=F)
+        }
+        channel_names <- character()
+        for (cog in 1:length(x)) {
+            names <- names(x[[cog]]$series[[r]]$y)
+            if (! is.null(names)) {
+                channel_names  <- names
+                break
+            }
+        }
+        if (include_raw) {
+            for(col in channel_names) {
+                s <- sapply(x, function(v) v$series[[r]][['y']][[col]])
+                s[sapply(s, is.null)] <- NA
+                df[[paste0(r,'.',col)]]  <- unlist(s, use.names=F)
+            }
         }
     }
 
