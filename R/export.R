@@ -21,39 +21,81 @@
 #'
 #' @export
 
-as.data.frame.MSThermResultSet <- function( x, include_raw=F, ... ) {
-
-    df <- data.frame(
-        row.names = sapply(x, '[[', "name")
-    )
-    df$annotation <- sapply(x, '[[', "annotation")
+as.data.frame.MSThermResultSet <- function( x, include_raw=F, long=F, ... ) {
 
     repl_lists <- lapply(x, function(d)
         unique(sapply( d$series, '[[', "name" )))
     repl_names <- unique(unlist(repl_lists))
     repl_names <- repl_names[order(repl_names)]
 
-    for (r in repl_names) {
-        #x <- x[1]$series[[r]][['x']]
+    if (long) {
+        
+        df <- data.frame(
+            protein   = character(),
+            replicate = character(),
+            variable  = character(),
+            value     = numeric(),
+            stringsAsFactors=F
+        )
 
-        for(col in c("n_peps","pep_seqs","tm","psm","inf","slope","k","plat","r2","rmsd")) {
-            s <- sapply(x, function(v) v$series[[r]][[col]])
-            s[sapply(s, is.null)] <- NA
-            df[[paste0(r,'.',col)]]  <- unlist(s, use.names=F)
-        }
-        channel_names <- character()
-        for (cog in 1:length(x)) {
-            names <- names(x[[cog]]$series[[r]]$y)
-            if (! is.null(names)) {
-                channel_names  <- names
-                break
+        #TODO: almost certainly there is a more efficient way to do this
+        for (prot in x) {
+            for (r in repl_names) {
+                if (is.null( prot$series[[r]] )) {
+                    next
+                }
+                cols <- c("n_peps","pep_seqs","tm","psm","inf","slope","k","plat","r2","rmsd")
+                s <- unlist( prot$series[[r]][cols] )
+                s[is.null(s)] <- NA
+                df <- rbind(df,list(
+                    protein=rep(prot$name, length(cols)),
+                    replicate=rep(r, length(cols)),
+                    variable=cols,
+                    value=s
+                ), stringsAsFactors=F)
+                #for (col in cols) {
+                    #value=prot$series[[r]][[col]]
+                    #if (is.null(value)) {
+                        #value <- NA
+                    #}
+                    #df <- rbind(df,list(
+                        #protein=prot$name,
+                        #replicate=r,
+                        #variable=col,
+                        #value=value
+                    #))
             }
         }
-        if (include_raw) {
-            for(col in channel_names) {
-                s <- sapply(x, function(v) v$series[[r]][['y']][[col]])
+    }
+
+    else {
+        df <- data.frame(
+            row.names = sapply(x, '[[', "name")
+        )
+        df$annotation <- sapply(x, '[[', "annotation")
+
+        for (r in repl_names) {
+            #x <- x[1]$series[[r]][['x']]
+
+            for(col in c("n_peps","pep_seqs","tm","psm","inf","slope","k","plat","r2","rmsd")) {
+                s <- sapply(x, function(v) v$series[[r]][[col]])
                 s[sapply(s, is.null)] <- NA
                 df[[paste0(r,'.',col)]]  <- unlist(s, use.names=F)
+            }
+            channel_names <- character()
+            for (cog in 1:length(x)) {
+                names <- names(x[[cog]]$series[[r]]$y)
+                if (! is.null(names)) {
+                    channel_names  <- names
+                    break
+                }
+            }
+            if (include_raw) {
+                for(col in channel_names) {
+                    s <- sapply(x, function(v) v$series[[r]][['y']][[col]])
+                    s[sapply(s, is.null)] <- NA
+                    df[[paste0(r,'.',col)]]  <- unlist(s, use.names=F)
+                }
             }
         }
     }

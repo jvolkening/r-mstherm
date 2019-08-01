@@ -1,3 +1,12 @@
+# mstherm 0.4.9
+
+* Additional export options
+* Unique peptide counting and reporting
+
+# mstherm 0.4.8
+
+* Added series merging (undocumented, alpha)
+
 # mstherm 0.4.7
 
 * Added additional method parameters related to filtering of protein results
