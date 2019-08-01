@@ -318,7 +318,7 @@ norm_to_std <- function(
     sums <- apply(as.matrix(quant),2,function(x){sum(as.numeric(x),na.rm=T)})
     ratios <- sums/sums[1]
 
-    corrected <- ratios/std.ratios
+    corrected <- abs_to_ratio(ratios/std.ratios, method="near")
 
     if (model) {
         x <- temps[corrected < 1.2]
