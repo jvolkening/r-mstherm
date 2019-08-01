@@ -146,6 +146,7 @@ model_protein <- function( expt, protein,
         merged_inf      <- 0
         merged_psms     <- 0
         merged_n_peps   <- NULL
+        merged_pep_seqs <- NULL
         n_reps          <- 0
 
         # Process each replicate
@@ -237,9 +238,13 @@ model_protein <- function( expt, protein,
             merged_sum      <- merged_sum + sum(sums)
             if (is.null(merged_n_peps)) {
                 merged_n_peps   <- n_peps
+                merged_pep_seqs <- pep_seqs
             }
             else {
                 merged_n_peps <- min(merged_n_peps, n_peps)
+                if (merged_n_peps == n_peps) {
+                    merged_pep_seqs <- pep_seqs
+                }
             }
 
             if (! merge_reps) {
@@ -341,6 +346,10 @@ model_protein <- function( expt, protein,
 
             # Here we renormalize the second sample to the first,
             # ASSUMING only two samples of equal length !!!!
+            # 
+            # At some point we should support more than two series to merge.
+            # This could be done iteratively, i.e. merge the first two, create
+            # a pseudo-replicate from them, merge it with the next one, etc.
             x.merged <- merged_temps
             y.merged <- merged_profiles
             if (length(sfs)>0) {
@@ -374,7 +383,8 @@ model_protein <- function( expt, protein,
             fit$x        <- merged_temps
             fit$y        <- merged_profiles
             fit$inf      <- merged_inf/merged_sum
-            fit_n_peps   <- merged_n_peps
+            fit$n_peps   <- merged_n_peps
+            fit$pep_seqs <- merged_pep_seqs
 
             if (merged_temps[1] > max_first_temp) {
                 fit$is.fitted <- 0
